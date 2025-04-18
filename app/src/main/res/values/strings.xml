@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Smart Alarm</string>
+    <string name="home">Home</string>
+    <string name="streak">Streak</string>
+    <string name="alarm">Alarm</string>
+    <string name="user">User</string>
+</resources>
