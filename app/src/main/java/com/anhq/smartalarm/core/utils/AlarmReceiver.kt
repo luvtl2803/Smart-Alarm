@@ -1,3 +1,4 @@
+// AlarmReceiver.kt
 package com.anhq.smartalarm.core.utils
 
 import android.annotation.SuppressLint
@@ -48,7 +49,7 @@ class AlarmReceiver : BroadcastReceiver() {
 
         try {
             when (intent?.action) {
-                "com.example.sleepsafe.CANCEL_ALARM" -> handleAlarmCancellation()
+                "com.anhq.smartalarm.CANCEL_ALARM" -> handleAlarmCancellation()
                 else -> handleAlarmTrigger(context)
             }
         } catch (e: Exception) {

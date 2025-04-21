@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
 import com.anhq.smartalarm.app.navigation.TopLevelDestination
 import com.anhq.smartalarm.features.alarm.navigation.navigateToAlarm
+import com.anhq.smartalarm.features.editalarm.navigation.navigateToEditAlarm
 import com.anhq.smartalarm.features.home.navigation.HomeRoute
 import com.anhq.smartalarm.features.home.navigation.navigateToHome
 import com.anhq.smartalarm.features.statistics.navigation.navigateToStatistics

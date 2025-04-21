@@ -28,7 +28,7 @@ class StopReceiver : BroadcastReceiver() {
 
             // Send broadcast to cancel the alarm
             val cancelAlarmIntent = Intent(context, AlarmReceiver::class.java).apply {
-                action = "com.example.sleepsafe.CANCEL_ALARM"
+                action = "com.anhq.smartalarm.CANCEL_ALARM"
             }
             context.sendBroadcast(cancelAlarmIntent)
 

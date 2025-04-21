@@ -10,3 +10,4 @@ class MyApplication : Application() {
 //        SyncInitializer.init(this)
     }
 }
+

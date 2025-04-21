@@ -15,8 +15,11 @@ fun NavController.navigateToAlarm(navOptions: NavOptions? = null) = navigate(
 )
 
 fun NavGraphBuilder.alarmScreen(
+    navController: NavController
 ) {
     composable<AlarmRoute> {
-        AlarmRoute()
+        AlarmRoute(
+            navController = navController
+        )
     }
 }

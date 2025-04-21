@@ -2,6 +2,7 @@ package com.anhq.smartalarm.app.navigation
 
 import com.anhq.smartalarm.R
 import com.anhq.smartalarm.features.alarm.navigation.AlarmRoute
+import com.anhq.smartalarm.features.editalarm.navigation.EditAlarmRoute
 import com.anhq.smartalarm.features.home.navigation.HomeRoute
 import com.anhq.smartalarm.features.statistics.navigation.StatisticsRoute
 import kotlin.reflect.KClass

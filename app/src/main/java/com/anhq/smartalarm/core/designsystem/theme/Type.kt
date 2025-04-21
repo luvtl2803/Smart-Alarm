@@ -49,7 +49,7 @@ val Typography.title2: TextStyle
 val Typography.body1: TextStyle
     get() = TextStyle(
         fontFamily = OxygenRegular,
-        fontSize = 18.sp,
+        fontSize = 24.sp,
         lineHeight = 27.sp,
         letterSpacing = 0.2.sp
     )
@@ -57,7 +57,7 @@ val Typography.body1: TextStyle
 val Typography.body2: TextStyle
     get() = TextStyle(
         fontFamily = OxygenRegular,
-        fontSize = 18.sp,
+        fontSize = 22.sp,
         lineHeight = 27.sp,
         letterSpacing = 0.2.sp
     )
@@ -65,7 +65,7 @@ val Typography.body2: TextStyle
 val Typography.body3_bold: TextStyle
     get() = TextStyle(
         fontFamily = OxygenBold,
-        fontSize = 16.sp,
+        fontSize = 20.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.15.sp
     )
@@ -73,7 +73,7 @@ val Typography.body3_bold: TextStyle
 val Typography.body3_medium: TextStyle
     get() = TextStyle(
         fontFamily = OxygenRegular,
-        fontSize = 16.sp,
+        fontSize = 20.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.15.sp
     )
@@ -81,7 +81,7 @@ val Typography.body3_medium: TextStyle
 val Typography.body4: TextStyle
     get() = TextStyle(
         fontFamily = OxygenRegular,
-        fontSize = 14.sp,
+        fontSize = 18.sp,
         lineHeight = 21.sp,
         letterSpacing = 0.1.sp
     )
@@ -89,7 +89,7 @@ val Typography.body4: TextStyle
 val Typography.body5: TextStyle
     get() = TextStyle(
         fontFamily = OxygenRegular,
-        fontSize = 14.sp,
+        fontSize = 16.sp,
         lineHeight = 21.sp,
         letterSpacing = 0.1.sp
     )
@@ -97,7 +97,7 @@ val Typography.body5: TextStyle
 val Typography.label1: TextStyle
     get() = TextStyle(
         fontFamily = OxygenBold,
-        fontSize = 24.sp,
+        fontSize = 20.sp,
         lineHeight = 18.sp,
         letterSpacing = 0.5.sp
     )
@@ -105,7 +105,7 @@ val Typography.label1: TextStyle
 val Typography.label2: TextStyle
     get() = TextStyle(
         fontFamily = OxygenBold,
-        fontSize = 18.sp,
+        fontSize = 16.sp,
         lineHeight = 18.sp,
         letterSpacing = 0.5.sp
     )
@@ -122,7 +122,7 @@ val Typography.gradient1: TextStyle
     get() = TextStyle(
         brush = Brush.horizontalGradient(listOf(Pure01, Pure02)),
         fontFamily = OxygenBold,
-        fontSize = 18.sp,
+        fontSize = 16.sp,
         lineHeight = 27.sp,
         letterSpacing = 0.2.sp
     )
