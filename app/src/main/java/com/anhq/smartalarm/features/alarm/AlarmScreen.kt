@@ -1,7 +1,9 @@
 package com.anhq.smartalarm.features.alarm
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,20 +26,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,28 +52,32 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.anhq.smartalarm.core.designsystem.theme.label1
 import com.anhq.smartalarm.core.model.Alarm
-import com.anhq.smartalarm.core.model.AlarmSetType
+import com.anhq.smartalarm.features.addalarm.navigation.navigateToAddAlarm
 import com.anhq.smartalarm.features.editalarm.navigation.navigateToEditAlarm
 import kotlin.math.roundToInt
 
 @Composable
 fun AlarmRoute(
     navController: NavController,
-    viewModel: AlarmViewModel = viewModel()
 ) {
+    val viewModel: AlarmViewModel = hiltViewModel()
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
 
     AlarmScreen(
         alarms = alarms,
-        onToggle = { index, isEnabled -> viewModel.toggleAlarm(index, isEnabled) },
-        onEditClick = { /* Xử lý chỉnh sửa sau */ },
+        setAlarmActive = { alarm, isActive ->
+            viewModel.updateAlarmStatus(alarm = alarm, isActive = isActive)
+        },
+        onEditClick = { alarmId ->
+            navController.navigateToEditAlarm(id = alarmId)
+        },
         onAddClick = {
-            navController.navigateToEditAlarm(id = 0, type = AlarmSetType.CREATE)
+            navController.navigateToAddAlarm()
         }
     )
 }
@@ -74,8 +85,8 @@ fun AlarmRoute(
 @Composable
 fun AlarmScreen(
     alarms: List<Alarm>,
-    onToggle: (Int, Boolean) -> Unit,
-    onEditClick: () -> Unit,
+    setAlarmActive: (Alarm, Boolean) -> Unit,
+    onEditClick: (Int) -> Unit,
     onAddClick: () -> Unit
 ) {
     Scaffold(
@@ -101,13 +112,8 @@ fun AlarmScreen(
                         style = MaterialTheme.typography.label1,
                         textAlign = TextAlign.Center
                     )
-                    Text(
-                        "Edit",
-                        color = Color(0xFFB388FF),
-                        modifier = Modifier.clickable { onEditClick() }
-                    )
                 }
-                Spacer(modifier = Modifier.height(50.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 LazyColumn(
                     modifier = Modifier
@@ -117,16 +123,23 @@ fun AlarmScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     item {
-                        alarms.forEachIndexed { index, alarm ->
-                            AlarmCard(alarm = alarm, onToggle = { onToggle(index, it) })
-                            Spacer(modifier = Modifier.height(16.dp))
+                        alarms.forEach { alarm ->
+                            AlarmCard(
+                                alarm = alarm,
+                                onEditClick = onEditClick,
+                                setAlarmActive = { isActive ->
+                                    setAlarmActive(alarm, isActive)
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
                         }
+                        Spacer(modifier = Modifier.height(30.dp))
                     }
                 }
             }
 
-            var offsetX by remember { mutableFloatStateOf(0f) }
-            var offsetY by remember { mutableStateOf(0f) }
+            var offsetX by remember { mutableFloatStateOf((-30.946579).toFloat()) }
+            var offsetY by remember { mutableFloatStateOf((-109.210396).toFloat()) }
 
             Box(
                 modifier = Modifier
@@ -155,15 +168,44 @@ fun AlarmScreen(
                     containerColor = Color(0xFFB388FF),
                 )
             }
-
-            Spacer(modifier = Modifier.height(100.dp))
         }
     )
 }
 
 @Composable
-fun AlarmCard(alarm: Alarm, onToggle: (Boolean) -> Unit) {
-    val gradient = if (alarm.isEnabled) {
+fun SwipeToDismissListItems() {
+    val dismissState = rememberSwipeToDismissBoxState()
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val color by
+            animateColorAsState(
+                when (dismissState.targetValue) {
+                    SwipeToDismissBoxValue.Settled -> Color.LightGray
+                    SwipeToDismissBoxValue.StartToEnd -> Color.Green
+                    SwipeToDismissBoxValue.EndToStart -> Color.Red
+                }
+            )
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(color)
+            )
+        }
+    ) {
+        OutlinedCard(shape = RectangleShape) {
+            ListItem(
+                headlineContent = { Text("Cupcake") },
+                supportingContent = { Text("Swipe me left or right!") }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun AlarmCard(alarm: Alarm, onEditClick: (Int) -> Unit, setAlarmActive: (Boolean) -> Unit) {
+    val gradient = if (alarm.isActive) {
         Brush.linearGradient(listOf(Color(0xFF8E2DE2), Color(0xFF4A00E0)))
     } else {
         Brush.linearGradient(listOf(Color(0xFF9C27B0), Color(0xFF673AB7)))
@@ -172,6 +214,14 @@ fun AlarmCard(alarm: Alarm, onToggle: (Boolean) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .combinedClickable(
+                onClick = {
+                    onEditClick(alarm.id)
+                },
+                onLongClick = {
+                    setAlarmActive(!alarm.isActive)
+                }
+            )
             .background(brush = gradient, shape = RoundedCornerShape(20.dp))
             .padding(16.dp)
     ) {
@@ -214,8 +264,10 @@ fun AlarmCard(alarm: Alarm, onToggle: (Boolean) -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Switch(
-                checked = alarm.isEnabled,
-                onCheckedChange = onToggle
+                checked = alarm.isActive,
+                onCheckedChange = {
+                    setAlarmActive(!alarm.isActive)
+                }
             )
         }
     }
@@ -232,12 +284,12 @@ private fun AlarmPreview() {
                 minute = 30,
                 repeatDays = listOf(1, 2, 4, 5),
                 label = "Morning Alarm",
-                isEnabled = true,
+                isActive = true,
                 isVibrate = true,
-                timeInMillis = System.currentTimeMillis() + 12 * 60 * 60 * 1000 + 28 * 60 * 1000
+                timeInMillis = 1
             )
         ),
-        onToggle = { _, _ -> },
+        setAlarmActive = { _, _ -> },
         onEditClick = { },
         onAddClick = { }
     )

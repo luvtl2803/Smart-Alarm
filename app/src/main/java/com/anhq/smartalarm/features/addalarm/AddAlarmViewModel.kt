@@ -1,4 +1,4 @@
-package com.anhq.smartalarm.features.editalarm
+package com.anhq.smartalarm.features.addalarm
 
 import android.app.AlarmManager
 import android.app.Application
@@ -9,146 +9,134 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TimePickerState
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import com.anhq.smartalarm.core.data.repository.AlarmRepository
 import com.anhq.smartalarm.core.model.Alarm
 import com.anhq.smartalarm.core.utils.AlarmReceiver
-import com.anhq.smartalarm.features.editalarm.navigation.EditAlarmRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
 
+@OptIn(ExperimentalMaterial3Api::class)
 @HiltViewModel
-class EditAlarmViewModel @Inject constructor(
+class AddAlarmViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val alarmRepository: AlarmRepository,
-    savedStateHandle: SavedStateHandle
+    private val alarmRepository: AlarmRepository
 ) : ViewModel() {
 
     private val application = context.applicationContext as Application
-    val id = savedStateHandle.toRoute<EditAlarmRoute>().id
+
     private val _label = MutableStateFlow("Alarm Name")
     val label: StateFlow<String> = _label.asStateFlow()
-    private val _hour = MutableStateFlow(0)
-    val hour: StateFlow<Int> = _hour.asStateFlow()
-    private val _minute = MutableStateFlow(0)
-    val minute: StateFlow<Int> = _minute.asStateFlow()
+
     private val _repeatDays = MutableStateFlow(listOf<Int>())
     val repeatDays: StateFlow<List<Int>> = _repeatDays.asStateFlow()
-    private val _isActive = MutableStateFlow(true)
-    val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
+
+    private val _isEnable = MutableStateFlow(true)
+    val isEnable: StateFlow<Boolean> = _isEnable.asStateFlow()
+
     private val _isVibrate = MutableStateFlow(true)
     val isVibrate: StateFlow<Boolean> = _isVibrate.asStateFlow()
+
     private val _timeInMills = MutableStateFlow(0L)
     val timeInMills: StateFlow<Long> = _timeInMills.asStateFlow()
 
+    private val _timePickerState = MutableStateFlow(
+        TimePickerState(
+            initialHour = 1,
+            initialMinute = 1,
+            is24Hour = true
+        )
+    )
+    val timePickerState: StateFlow<TimePickerState> = _timePickerState.asStateFlow()
 
     private val _permissionRequired = MutableLiveData(false)
     val permissionRequired: LiveData<Boolean> = _permissionRequired
     private val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    val alarm = alarmRepository.getAlarmById(id).stateIn(
-        scope = viewModelScope,
-        started = WhileSubscribed(5_000),
-        initialValue = null
-    )
-
-    init {
-        viewModelScope.launch {
-            alarm.filterNotNull().collect { alarm ->
-                _label.value = alarm.label
-                _hour.value = alarm.hour
-                _minute.value = alarm.minute
-                _repeatDays.value = alarm.repeatDays
-                _isActive.value = alarm.isActive
-                _isVibrate.value = alarm.isVibrate
-                _timeInMills.value = alarm.timeInMillis
-            }
-        }
-    }
-
     fun setLabel(label: String) {
         _label.value = label
     }
+
+    fun getTimePickerState(timePickerState: TimePickerState) {
+        _timePickerState.value = timePickerState
+    }
+
     fun setIsVibrate(isVibrate: Boolean) {
         _isVibrate.value = isVibrate
     }
+
     fun setRepeatDays(repeatDays: List<Int>) {
         _repeatDays.value = repeatDays
     }
-    fun setTime(hour: Int, minute: Int) {
-        _hour.value = hour
-        _minute.value = minute
+
+    fun setTimeInMills() {
         val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, minute)
+            set(Calendar.HOUR_OF_DAY, _timePickerState.value.hour)
+            set(Calendar.MINUTE, _timePickerState.value.minute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
         _timeInMills.value = calendar.timeInMillis
     }
 
-    fun updateAlarm() {
+    fun saveAlarm() {
         viewModelScope.launch {
-            setAlarm(requestCode = id)
             val alarm = Alarm(
-                id = id,
+                id = 0,
                 label = label.value,
-                hour = hour.value,
-                minute = minute.value,
+                hour = timePickerState.value.hour,
+                minute = timePickerState.value.minute,
                 repeatDays = repeatDays.value,
-                isActive = true,
+                isActive = isEnable.value,
                 isVibrate = isVibrate.value,
                 timeInMillis = timeInMills.value
             )
-            alarmRepository.updateAlarm(alarm)
+            val id = alarmRepository.insertAlarm(alarm)
+            setAlarm(id, timeInMills.value)
         }
     }
 
-    private fun setAlarm(requestCode: Int) {
-            try {
-                if (!checkAlarmPermission()) {
-                    return
-                }
-
-                val alarmIntent = Intent(application, AlarmReceiver::class.java)
-                val pendingIntent = PendingIntent.getBroadcast(
-                    application,
-                    requestCode,
-                    alarmIntent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
-
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    _timeInMills.value,
-                    pendingIntent
-                )
-                val timeStr =
-                    formatTime(Calendar.getInstance().apply { timeInMillis = _timeInMills.value })
-                Log.d(TAG, "Alarm set: $timeStr")
-                showToast("Alarm set for $timeStr")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error setting alarm", e)
-                showToast("Failed to set alarm")
+    private fun setAlarm(requestCode: Int, timeInMills: Long) {
+        try {
+            if (!checkAlarmPermission()) {
+                return
             }
-    }
 
+            val alarmIntent = Intent(application, AlarmReceiver::class.java)
+            val pendingIntent = PendingIntent.getBroadcast(
+                application,
+                requestCode,
+                alarmIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                timeInMills,
+                pendingIntent
+            )
+            val timeStr =
+                formatTime(Calendar.getInstance().apply { timeInMillis = timeInMills })
+            Log.d(TAG, "Alarm set: $timeStr")
+            showToast("Alarm set for $timeStr")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting alarm", e)
+            showToast("Failed to set alarm")
+        }
+    }
 
     private fun checkAlarmPermission(): Boolean {
         if (!alarmManager.canScheduleExactAlarms()) {

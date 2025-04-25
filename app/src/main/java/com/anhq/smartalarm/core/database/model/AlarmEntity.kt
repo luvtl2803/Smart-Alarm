@@ -7,12 +7,12 @@ import androidx.room.TypeConverters
 @Entity(tableName = "alarm_entity")
 @TypeConverters(Converters::class)
 data class AlarmEntity(
-    @PrimaryKey val id: Int = 0,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val hour: Int,
     val minute: Int,
     val repeatDays: List<Int>,
     val label: String,
-    val isEnabled: Boolean,
+    val isActive: Boolean,
     val isVibrate: Boolean,
     val timeInMillis: Long
 )

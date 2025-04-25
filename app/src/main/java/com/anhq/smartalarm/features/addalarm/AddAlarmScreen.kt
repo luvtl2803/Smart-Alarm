@@ -1,4 +1,4 @@
-package com.anhq.smartalarm.features.editalarm
+package com.anhq.smartalarm.features.addalarm
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -65,7 +65,6 @@ import com.anhq.smartalarm.core.designsystem.theme.gradient1
 import com.anhq.smartalarm.core.designsystem.theme.label1
 import com.anhq.smartalarm.core.designsystem.theme.label2
 import com.anhq.smartalarm.core.designsystem.theme.label3
-import com.anhq.smartalarm.core.model.Alarm
 import com.anhq.smartalarm.core.model.AlarmCount
 import com.anhq.smartalarm.core.model.AlarmGame
 import com.anhq.smartalarm.core.model.NameOfGame
@@ -74,37 +73,34 @@ import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditAlarmRoute(
+fun AddAlarmRoute(
     onCancelClick: () -> Unit,
-    onUpdateClick: () -> Unit,
+    onAddClick: () -> Unit,
 ) {
-    val viewModel: EditAlarmViewModel = hiltViewModel()
+    val viewModel: AddAlarmViewModel = hiltViewModel()
     val permissionRequired = viewModel.permissionRequired.value
 
-    val myAlarm by viewModel.alarm.collectAsStateWithLifecycle()
     val label by viewModel.label.collectAsStateWithLifecycle()
     val repeatDays by viewModel.repeatDays.collectAsStateWithLifecycle()
     val isVibrate by viewModel.isVibrate.collectAsStateWithLifecycle()
 
-
-    myAlarm?.let { alarm ->
-        EditAlarmScreen(
-            alarm = alarm,
-            onCancelClick = onCancelClick,
-            onUpdateClick = {
-                if (permissionRequired == true) {
-                    viewModel.getExactAlarmPermissionIntent()
-                } else {
-                    viewModel.updateAlarm()
-                    onUpdateClick()
-                }
+    AddAlarmScreen(
+        onCancelClick = onCancelClick,
+        onAddClick = {
+            if (permissionRequired == true) {
+                viewModel.getExactAlarmPermissionIntent()
+            } else {
+                viewModel.setTimeInMills()
+                viewModel.saveAlarm()
+                onAddClick()
+            }
         },
         label = label,
-            getTimePickerState = { timePickerState ->
-                viewModel.setTime(timePickerState.hour, timePickerState.minute)
-            },
         setLabel = {
             viewModel.setLabel(it)
+        },
+        setTimePickerState = { timePickerState ->
+            viewModel.getTimePickerState(timePickerState)
         },
         repeatDays = repeatDays,
         setRepeatDays = {
@@ -113,31 +109,30 @@ fun EditAlarmRoute(
         isVibrate = isVibrate,
         setVibrate = {
             viewModel.setIsVibrate(!isVibrate)
-        }
+        },
+
         )
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditAlarmScreen(
-    alarm: Alarm,
+fun AddAlarmScreen(
     onCancelClick: () -> Unit,
-    onUpdateClick: () -> Unit,
+    onAddClick: () -> Unit,
     label: String,
-    getTimePickerState: (TimePickerState) -> Unit,
     setLabel: (String) -> Unit,
     repeatDays: List<Int>,
     setRepeatDays: (List<Int>) -> Unit,
+    setTimePickerState: (TimePickerState) -> Unit,
     isVibrate: Boolean,
     setVibrate: () -> Unit,
 ) {
     var isEditName by remember { mutableStateOf(false) }
-
+    val currentTime = Calendar.getInstance()
     val timePickerState = rememberTimePickerState(
-        initialHour = alarm.hour,
-        initialMinute = alarm.minute,
-        is24Hour = true
+        initialHour = currentTime.get(Calendar.HOUR_OF_DAY),
+        initialMinute = currentTime.get(Calendar.MINUTE),
+        is24Hour = true,
     )
 
     Scaffold(
@@ -171,8 +166,8 @@ fun EditAlarmScreen(
 
                     Text(
                         modifier = Modifier.clickable {
-                            getTimePickerState(timePickerState)
-                            onUpdateClick()
+                            setTimePickerState(timePickerState)
+                            onAddClick()
                         },
                         text = "Save",
                         style = MaterialTheme.typography.gradient1,
@@ -268,7 +263,7 @@ fun EditAlarmScreen(
 
                             Switch(
                                 checked = isVibrate,
-                                onCheckedChange = { setVibrate() } ,
+                                onCheckedChange = { setVibrate() },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
                                     checkedTrackColor = Color(0xFFB388FF)
@@ -546,31 +541,11 @@ fun PreviewAlarm() {
 @Preview(showBackground = true)
 @Composable
 private fun EditAlarmScreenPreview() {
-    val currentTime = Calendar.getInstance()
-
-    val timePickerState = rememberTimePickerState(
-        initialHour = currentTime.get(Calendar.HOUR_OF_DAY),
-        initialMinute = currentTime.get(Calendar.MINUTE),
-        is24Hour = false,
-    )
-    EditAlarmScreen(
-        alarm = Alarm(
-            id = 1,
-            hour = currentTime.get(Calendar.HOUR_OF_DAY),
-            minute = currentTime.get(Calendar.MINUTE),
-            repeatDays = listOf(),
-            isVibrate = false,
-            label = "Alarm Name",
-            isActive = true,
-            timeInMillis = 0
-        ),
+    AddAlarmScreen(
         onCancelClick = {},
-        onUpdateClick = {},
+        onAddClick = {},
+        setTimePickerState = {},
         label = "Alarm Name",
-        getTimePickerState = {
-            timePickerState.hour = it.hour
-            timePickerState.minute = it.minute
-        },
         setLabel = {},
         repeatDays = listOf(),
         setRepeatDays = {},

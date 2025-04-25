@@ -10,7 +10,7 @@ data class Alarm(
     val minute: Int,
     val repeatDays: List<Int>, // Danh sách các ngày lặp lại (0 = Chủ nhật, 1 = Thứ Hai, ...)
     val label: String,
-    val isEnabled: Boolean,
+    val isActive: Boolean,
     val isVibrate: Boolean,
     val timeInMillis: Long // Thêm thuộc tính timeInMillis để lưu thời gian báo thức
 ) {
@@ -23,7 +23,7 @@ data class Alarm(
 
     // Tính thời gian đếm ngược từ thời gian hiện tại đến thời gian báo thức
     fun getCountdownTime(currentTimeMillis: Long): String {
-        if (!isEnabled) return "Disabled"
+        if (!isActive) return "Disabled"
 
         val timeDifference = timeInMillis - currentTimeMillis
         if (timeDifference <= 0) {
@@ -76,7 +76,7 @@ fun AlarmEntity.toAlarm() = Alarm(
     minute = minute,
     repeatDays = repeatDays,
     label = label,
-    isEnabled = isEnabled,
+    isActive = isActive,
     isVibrate = isVibrate,
     timeInMillis = timeInMillis
 )
@@ -87,7 +87,7 @@ fun Alarm.toAlarmEntity() = AlarmEntity(
     minute = minute,
     repeatDays = repeatDays,
     label = label,
-    isEnabled = isEnabled,
+    isActive = isActive,
     isVibrate = isVibrate,
     timeInMillis = timeInMillis
 )
