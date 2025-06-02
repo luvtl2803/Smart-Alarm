@@ -1,97 +1,123 @@
 package com.anhq.smartalarm.core.model
 
-import com.anhq.smartalarm.core.database.model.AlarmEntity
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
+@Entity(tableName = "alarms")
 data class Alarm(
-    val id: Int,
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
     val hour: Int,
     val minute: Int,
-    val repeatDays: List<Int>, // Danh sách các ngày lặp lại (0 = Chủ nhật, 1 = Thứ Hai, ...)
-    val label: String,
-    val isActive: Boolean,
-    val isVibrate: Boolean,
-    val timeInMillis: Long // Thêm thuộc tính timeInMillis để lưu thời gian báo thức
+    val isActive: Boolean = true,
+    val isVibrate: Boolean = true,
+    val selectedDays: Set<DayOfWeek> = emptySet(),
+    val label: String = "",
+    val gameType: AlarmGameType = AlarmGameType.NONE,
+    val soundUri: String = ""
 ) {
-    // Chuyển repeatDays thành chuỗi hiển thị (ví dụ: "Mon, Tue, Thu, Fri")
+    // Chuyển repeatDays thành chuỗi hiển thị
     fun getRepeatDaysString(): String {
-        if (repeatDays.isEmpty()) return "No repeat"
-        val dayNames = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-        return repeatDays.sorted().joinToString(", ") { dayNames[it] }
+        if (selectedDays.isEmpty()) return "Once Time"
+        
+        val orderedDays = selectedDays.sortedBy { 
+            when (it) {
+                DayOfWeek.MON -> 1
+                DayOfWeek.TUE -> 2
+                DayOfWeek.WED -> 3
+                DayOfWeek.THU -> 4
+                DayOfWeek.FRI -> 5
+                DayOfWeek.SAT -> 6
+                DayOfWeek.SUN -> 7
+            }
+        }
+        return orderedDays.joinToString(", ") { it.label }
     }
 
     // Tính thời gian đếm ngược từ thời gian hiện tại đến thời gian báo thức
     fun getCountdownTime(currentTimeMillis: Long): String {
         if (!isActive) return "Disabled"
 
-        val timeDifference = timeInMillis - currentTimeMillis
-        if (timeDifference <= 0) {
-            // Nếu thời gian báo thức đã qua, có thể cần tính lại thời gian cho lần lặp tiếp theo
-            return calculateNextAlarmTime(currentTimeMillis)
-        }
-
-        val hours = TimeUnit.MILLISECONDS.toHours(timeDifference)
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(timeDifference) % 60
-        return "${hours}h ${minutes}m"
-    }
-
-    // Tính thời gian báo thức tiếp theo nếu thời gian hiện tại đã qua
-    private fun calculateNextAlarmTime(currentTimeMillis: Long): String {
-        if (repeatDays.isEmpty()) return "Passed"
-
         val calendar = Calendar.getInstance().apply {
-            timeInMillis = currentTimeMillis
-        }
-        val currentDay = calendar.get(Calendar.DAY_OF_WEEK) - 1 // 0 = Chủ nhật, 1 = Thứ Hai, ...
-
-        // Tìm ngày lặp lại tiếp theo gần nhất
-        var daysToAdd = 1
-        while (true) {
-            val nextDay = (currentDay + daysToAdd) % 7
-            if (repeatDays.contains(nextDay)) break
-            daysToAdd++
-        }
-
-        // Cập nhật thời gian cho lần báo thức tiếp theo
-        calendar.apply {
-            add(Calendar.DAY_OF_MONTH, daysToAdd)
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
 
-        val nextTimeInMillis = calendar.timeInMillis
-        val timeDifference = nextTimeInMillis - currentTimeMillis
-        val hours = TimeUnit.MILLISECONDS.toHours(timeDifference)
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(timeDifference) % 60
-        return "${hours}h ${minutes}m"
+        // Nếu không có ngày lặp lại
+        if (selectedDays.isEmpty()) {
+            var timeInMillis = calendar.timeInMillis
+            if (timeInMillis <= currentTimeMillis) {
+                calendar.add(Calendar.DAY_OF_MONTH, 1)
+                timeInMillis = calendar.timeInMillis
+            }
+            return formatCountdown(timeInMillis - currentTimeMillis)
+        }
+
+        // Tìm ngày gần nhất trong các ngày được chọn
+        var nearestDay = calendar.timeInMillis
+        var foundValidDay = false
+
+        selectedDays.forEach { day ->
+            val nextTime = calculateNextDayTime(currentTimeMillis, day)
+            if (!foundValidDay || nextTime < nearestDay) {
+                nearestDay = nextTime
+                foundValidDay = true
+            }
+        }
+
+        return if (foundValidDay) {
+            formatCountdown(nearestDay - currentTimeMillis)
+        } else {
+            "Invalid time"
+        }
+    }
+
+    private fun calculateNextDayTime(currentTimeMillis: Long, dayOfWeek: DayOfWeek): Long {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = currentTimeMillis
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        val targetDayOfWeek = when (dayOfWeek) {
+            DayOfWeek.MON -> Calendar.MONDAY
+            DayOfWeek.TUE -> Calendar.TUESDAY
+            DayOfWeek.WED -> Calendar.WEDNESDAY
+            DayOfWeek.THU -> Calendar.THURSDAY
+            DayOfWeek.FRI -> Calendar.FRIDAY
+            DayOfWeek.SAT -> Calendar.SATURDAY
+            DayOfWeek.SUN -> Calendar.SUNDAY
+        }
+
+        val currentDay = calendar.get(Calendar.DAY_OF_WEEK)
+        var daysToAdd = (targetDayOfWeek - currentDay + 7) % 7
+
+        // Nếu là ngày hiện tại và thời gian đã qua
+        if (daysToAdd == 0 && calendar.timeInMillis <= currentTimeMillis) {
+            daysToAdd = 7
+        }
+
+        calendar.add(Calendar.DAY_OF_MONTH, daysToAdd)
+        return calendar.timeInMillis
+    }
+
+    private fun formatCountdown(timeDifferenceMillis: Long): String {
+        if (timeDifferenceMillis <= 0) return "Now"
+
+        val hours = TimeUnit.MILLISECONDS.toHours(timeDifferenceMillis)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(timeDifferenceMillis) % 60
+
+        return when {
+            hours > 24 -> "${hours / 24}n ${hours % 24}g ${minutes}p"
+            hours > 0 -> "${hours}g ${minutes}p"
+            hours == 0L && minutes == 0L -> "Sắp tới"
+            else -> "${minutes}p"
+        }
     }
 }
-
-fun AlarmEntity.toAlarm() = Alarm(
-    id = id,
-    hour = hour,
-    minute = minute,
-    repeatDays = repeatDays,
-    label = label,
-    isActive = isActive,
-    isVibrate = isVibrate,
-    timeInMillis = timeInMillis
-)
-
-fun Alarm.toAlarmEntity() = AlarmEntity(
-    id = id,
-    hour = hour,
-    minute = minute,
-    repeatDays = repeatDays,
-    label = label,
-    isActive = isActive,
-    isVibrate = isVibrate,
-    timeInMillis = timeInMillis
-)
-
-fun List<AlarmEntity>.mapToAlarms() = map { it.toAlarm() }
-
-fun AlarmEntity.mapToAlarm() = toAlarm()

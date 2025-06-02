@@ -32,11 +32,17 @@ class DefaultAlarmRepository @Inject constructor(
         }
     }
 
-    override fun getAlarms(): Flow<List<Alarm>> {
-        return alarmDao.getAlarms().map { it.mapToAlarms() }
+    override suspend fun deleteAlarm(alarm: Alarm) {
+        withContext(Dispatchers.IO) {
+            alarmDao.deleteAlarm(alarm.toAlarmEntity())
+        }
     }
 
-    override fun getAlarmById(alarmId: Int): Flow<Alarm> {
-        return alarmDao.getAlarmById(alarmId).map { it.mapToAlarm() }
+    override fun getAllAlarms(): Flow<List<Alarm>> {
+        return alarmDao.getAllAlarms().map { it.mapToAlarms() }
+    }
+
+    override fun getAlarmById(alarmId: Int): Flow<Alarm?> {
+        return alarmDao.getAlarmById(alarmId).map { it?.mapToAlarm() }
     }
 }

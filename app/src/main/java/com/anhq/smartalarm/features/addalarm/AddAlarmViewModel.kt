@@ -5,6 +5,7 @@ import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.RingtoneManager
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
@@ -17,7 +18,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.anhq.smartalarm.core.data.repository.AlarmRepository
 import com.anhq.smartalarm.core.model.Alarm
+import com.anhq.smartalarm.core.model.AlarmGameType
+import com.anhq.smartalarm.core.model.DayOfWeek
+import com.anhq.smartalarm.core.utils.AlarmPreviewManager
 import com.anhq.smartalarm.core.utils.AlarmReceiver
+import com.anhq.smartalarm.core.utils.AlarmSound
+import com.anhq.smartalarm.core.utils.AlarmSoundManager
+import com.anhq.smartalarm.features.alarm.NoGameAlarmActivity
+import com.anhq.smartalarm.features.game.AlarmGameActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,38 +41,56 @@ import javax.inject.Inject
 @HiltViewModel
 class AddAlarmViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val alarmRepository: AlarmRepository
+    private val alarmRepository: AlarmRepository,
+    private val alarmPreviewManager: AlarmPreviewManager
 ) : ViewModel() {
 
     private val application = context.applicationContext as Application
+    private val alarmSoundManager = AlarmSoundManager(context)
+    private val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    private val _label = MutableStateFlow("Alarm Name")
+    private val _label = MutableStateFlow("Báo thức")
     val label: StateFlow<String> = _label.asStateFlow()
-
-    private val _repeatDays = MutableStateFlow(listOf<Int>())
-    val repeatDays: StateFlow<List<Int>> = _repeatDays.asStateFlow()
-
-    private val _isEnable = MutableStateFlow(true)
-    val isEnable: StateFlow<Boolean> = _isEnable.asStateFlow()
-
+    private val _selectedDays = MutableStateFlow<Set<DayOfWeek>>(emptySet())
+    val selectedDays: StateFlow<Set<DayOfWeek>> = _selectedDays.asStateFlow()
+    private val _isActive = MutableStateFlow(true)
+    val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
     private val _isVibrate = MutableStateFlow(true)
     val isVibrate: StateFlow<Boolean> = _isVibrate.asStateFlow()
-
+    private val _alarmSounds = MutableStateFlow<List<AlarmSound>>(emptyList())
+    val alarmSounds: StateFlow<List<AlarmSound>> = _alarmSounds.asStateFlow()
+    private val _selectedSound = MutableStateFlow<AlarmSound?>(null)
+    val selectedSound: StateFlow<AlarmSound?> = _selectedSound.asStateFlow()
     private val _timeInMills = MutableStateFlow(0L)
-    val timeInMills: StateFlow<Long> = _timeInMills.asStateFlow()
-
+    private val timeInMills: StateFlow<Long> = _timeInMills.asStateFlow()
     private val _timePickerState = MutableStateFlow(
         TimePickerState(
-            initialHour = 1,
-            initialMinute = 1,
+            initialHour = 0,
+            initialMinute = 0,
             is24Hour = true
         )
     )
-    val timePickerState: StateFlow<TimePickerState> = _timePickerState.asStateFlow()
+    private val timePickerState: StateFlow<TimePickerState> = _timePickerState.asStateFlow()
+    private val _gameType = MutableStateFlow(AlarmGameType.NONE)
+    val gameType: StateFlow<AlarmGameType> = _gameType.asStateFlow()
 
     private val _permissionRequired = MutableLiveData(false)
     val permissionRequired: LiveData<Boolean> = _permissionRequired
-    private val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    init {
+        loadAlarmSounds()
+        checkAlarmPermission()
+    }
+
+    private fun loadAlarmSounds() {
+        _alarmSounds.value = alarmSoundManager.getAllAlarmSounds()
+        val defaultAlarmSound = AlarmSound(
+            uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+            title = "Default"
+        )
+        _selectedSound.value = defaultAlarmSound
+        _alarmSounds.value = listOf(defaultAlarmSound) + _alarmSounds.value
+    }
 
     fun setLabel(label: String) {
         _label.value = label
@@ -78,8 +104,40 @@ class AddAlarmViewModel @Inject constructor(
         _isVibrate.value = isVibrate
     }
 
-    fun setRepeatDays(repeatDays: List<Int>) {
-        _repeatDays.value = repeatDays
+    fun setAlarmSound(sound: AlarmSound) {
+        _selectedSound.value = sound
+    }
+
+    fun previewAlarm(): Intent {
+        alarmPreviewManager.startPreview(
+            soundUri = selectedSound.value?.uri,
+            isVibrate = isVibrate.value
+        )
+
+        return if (gameType.value == AlarmGameType.NONE) {
+            Intent(context, NoGameAlarmActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra("is_preview", true)
+            }
+        } else {
+            Intent(context, AlarmGameActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                putExtra("game_type", gameType.value.ordinal)
+                putExtra("is_preview", true)
+            }
+        }
+    }
+
+    fun stopPreview() {
+        alarmPreviewManager.stopPreview()
+    }
+
+    fun toggleDay(day: DayOfWeek) {
+        _selectedDays.value = if (_selectedDays.value.contains(day)) {
+            _selectedDays.value - day
+        } else {
+            _selectedDays.value + day
+        }
     }
 
     fun setTimeInMills() {
@@ -92,56 +150,142 @@ class AddAlarmViewModel @Inject constructor(
         _timeInMills.value = calendar.timeInMillis
     }
 
+    fun setGameType(type: AlarmGameType) {
+        _gameType.value = type
+    }
+
+    private fun createAlarm(): Alarm {
+        // Get the actual sound URI, either from selected sound or default
+        val soundUri = try {
+            selectedSound.value?.uri?.toString() ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM).toString()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting sound URI, using default", e)
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM).toString()
+        }
+        Log.d(TAG, "Creating alarm with sound URI: $soundUri")
+
+        return Alarm(
+            hour = timePickerState.value.hour,
+            minute = timePickerState.value.minute,
+            isActive = isActive.value,
+            isVibrate = isVibrate.value,
+            selectedDays = selectedDays.value,
+            label = label.value,
+            gameType = gameType.value,
+            soundUri = soundUri
+        )
+    }
+
     fun saveAlarm() {
+        if (!checkAlarmPermission()) return
+
         viewModelScope.launch {
-            val alarm = Alarm(
-                id = 0,
-                label = label.value,
-                hour = timePickerState.value.hour,
-                minute = timePickerState.value.minute,
-                repeatDays = repeatDays.value,
-                isActive = isEnable.value,
-                isVibrate = isVibrate.value,
-                timeInMillis = timeInMills.value
-            )
+            val alarm = createAlarm()
             val id = alarmRepository.insertAlarm(alarm)
-            setAlarm(id, timeInMills.value)
+            scheduleAlarm(alarm.copy(id = id))
         }
     }
 
-    private fun setAlarm(requestCode: Int, timeInMills: Long) {
-        try {
-            if (!checkAlarmPermission()) {
-                return
-            }
+    private fun scheduleAlarm(alarm: Alarm) {
+        if (!checkAlarmPermission()) return
 
-            val alarmIntent = Intent(application, AlarmReceiver::class.java)
+        if (!alarm.isActive) return
+
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, alarm.hour)
+            set(Calendar.MINUTE, alarm.minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        // If time has passed and no repeat days
+        if (calendar.timeInMillis < System.currentTimeMillis() && alarm.selectedDays.isEmpty()) {
+            calendar.add(Calendar.DAY_OF_MONTH, 1)
+        }
+
+        val alarmIntent = Intent(application, AlarmReceiver::class.java).apply {
+            putExtra("alarm_id", alarm.id)
+            putExtra("game_type", alarm.gameType.ordinal)
+        }
+
+        if (alarm.selectedDays.isEmpty()) {
+            // Single alarm
             val pendingIntent = PendingIntent.getBroadcast(
                 application,
-                requestCode,
+                alarm.id,
                 alarmIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                timeInMills,
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent),
                 pendingIntent
             )
-            val timeStr =
-                formatTime(Calendar.getInstance().apply { timeInMillis = timeInMills })
-            Log.d(TAG, "Alarm set: $timeStr")
+
+            val timeStr = formatTime(calendar)
+            Log.d(TAG, "Single alarm set: $timeStr with game type: ${alarm.gameType}")
             showToast("Alarm set for $timeStr")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting alarm", e)
-            showToast("Failed to set alarm")
+        } else {
+            // Repeating alarms for each selected day
+            alarm.selectedDays.forEach { dayOfWeek ->
+                val nextAlarmTime = calculateNextAlarmTime(alarm.hour, alarm.minute, dayOfWeek)
+                val uniqueId = alarm.id * 10 + dayOfWeek.ordinal
+                val pendingIntent = PendingIntent.getBroadcast(
+                    application,
+                    uniqueId,
+                    alarmIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                alarmManager.setAlarmClock(
+                    AlarmManager.AlarmClockInfo(nextAlarmTime, pendingIntent),
+                    pendingIntent
+                )
+
+                val timeStr = formatTime(Calendar.getInstance().apply { timeInMillis = nextAlarmTime })
+                Log.d(
+                    TAG,
+                    "Repeating alarm set: $timeStr (requestCode: $uniqueId) with game type: ${alarm.gameType}"
+                )
+                showToast("Repeating alarm set for $timeStr")
+            }
         }
+    }
+
+    private fun calculateNextAlarmTime(hour: Int, minute: Int, dayOfWeek: DayOfWeek): Long {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        val targetDayOfWeek = when (dayOfWeek) {
+            DayOfWeek.SUN -> Calendar.SUNDAY
+            DayOfWeek.MON -> Calendar.MONDAY
+            DayOfWeek.TUE -> Calendar.TUESDAY
+            DayOfWeek.WED -> Calendar.WEDNESDAY
+            DayOfWeek.THU -> Calendar.THURSDAY
+            DayOfWeek.FRI -> Calendar.FRIDAY
+            DayOfWeek.SAT -> Calendar.SATURDAY
+        }
+
+        val currentDay = calendar.get(Calendar.DAY_OF_WEEK)
+        var daysUntilNext = (targetDayOfWeek - currentDay + 7) % 7
+
+        // If target is today but time has passed
+        if (daysUntilNext == 0 && calendar.timeInMillis <= System.currentTimeMillis()) {
+            daysUntilNext = 7 // Schedule for next week
+        }
+
+        calendar.add(Calendar.DAY_OF_MONTH, daysUntilNext)
+        return calendar.timeInMillis
     }
 
     private fun checkAlarmPermission(): Boolean {
-        if (!alarmManager.canScheduleExactAlarms()) {
-            _permissionRequired.postValue(true)
-            return false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                _permissionRequired.value = true
+                return false
+            }
         }
         return true
     }
@@ -162,8 +306,12 @@ class AddAlarmViewModel @Inject constructor(
         Toast.makeText(application, message, Toast.LENGTH_SHORT).show()
     }
 
-    companion object {
-        private const val TAG = "EditAlarmViewModel"
+    override fun onCleared() {
+        super.onCleared()
+        stopPreview()
     }
 
+    companion object {
+        private const val TAG = "AddAlarmViewModel"
+    }
 }

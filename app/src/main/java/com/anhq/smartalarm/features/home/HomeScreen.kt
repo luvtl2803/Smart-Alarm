@@ -61,7 +61,7 @@ fun HomeScreen(
             content = {
                 Text(
                     modifier = Modifier.padding(20.dp),
-                    text = "Don’t stop when you are tired STOP when you’re DONE",
+                    text = "Don't stop when you are tired STOP when you're DONE",
                     style = MaterialTheme.typography.title1
                 )
             }
@@ -85,8 +85,8 @@ fun HomeScreen(
 fun AlarmCard(
 
 ) {
-    val days = listOf("S", "M", "T", "W", "T", "F", "S")
-    val selectedDays = listOf(false, false, false, true, true, true, false)
+    val days = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
+    val selectedDays = listOf(false, false, true, true, true, false, false)
     var isAlarmOn by remember { mutableStateOf(true) }
 
     Column {

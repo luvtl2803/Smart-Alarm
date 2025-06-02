@@ -9,81 +9,84 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
+import com.anhq.smartalarm.features.setting.data.SettingDataStore
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import java.util.Calendar
-import java.util.Locale
+import javax.inject.Inject
 
 /**
  * BroadcastReceiver to handle snooze functionality for alarms.
  */
+@AndroidEntryPoint
 class SnoozeReceiver : BroadcastReceiver() {
+    @Inject
+    lateinit var settingDataStore: SettingDataStore
+
     companion object {
         private const val TAG = "SnoozeReceiver"
-        private const val SNOOZE_MINUTES = 2 // Configurable snooze duration
     }
 
-    @SuppressLint("ScheduleExactAlarm")
-    override fun onReceive(context: Context?, intent: Intent?) {
-        if (context == null) {
-            Log.e(TAG, "Received null context")
+    @SuppressLint("MissingPermission")
+    override fun onReceive(context: Context, intent: Intent) {
+        val alarmId = intent.getIntExtra("alarm_id", -1)
+        if (alarmId == -1) return
+
+        // Get snooze settings from SettingDataStore
+        val settings = runBlocking {
+            settingDataStore.settingsFlow.first()
+        }
+        
+        val snoozeDuration = settings.snoozeDurationMinutes
+        val maxSnoozeCount = settings.maxSnoozeCount
+
+        // Get current snooze count
+        val currentSnoozeCount = intent.getIntExtra("snooze_count", 0)
+        if (currentSnoozeCount >= maxSnoozeCount) {
+            Log.d(TAG, "Maximum snooze count reached for alarm $alarmId")
             return
         }
 
-        try {
-            Log.d(TAG, "Processing snooze request")
-
-            // Stop the current alarm sound
-            AlarmReceiver.stopAlarm()
-
-            // Clear the current notification
-            NotificationManagerCompat.from(context).cancel(AlarmReceiver.NOTIFICATION_ID)
-
-            scheduleSnoozeAlarm(context)
-
-            Log.d(TAG, "Alarm snoozed successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error snoozing alarm", e)
-        }
-    }
-
-    private fun scheduleSnoozeAlarm(context: Context) {
+        // Schedule next alarm
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        // Check for exact alarm permission on Android 12+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-            Log.e(TAG, "Cannot schedule exact alarms - permission not granted")
-            return
+        val calendar = Calendar.getInstance().apply {
+            add(Calendar.MINUTE, snoozeDuration)
         }
 
-        // Create a new alarm intent for snoozing
         val snoozeIntent = Intent(context, AlarmReceiver::class.java).apply {
-            putExtra("isSnoozeAlarm", true)
+            putExtra("alarm_id", alarmId)
+            putExtra("snooze_count", currentSnoozeCount + 1)
         }
 
-        val snoozePendingIntent = PendingIntent.getBroadcast(
+        val pendingIntent = PendingIntent.getBroadcast(
             context,
-            System.currentTimeMillis().toInt(), // Use unique request code for each snooze
+            alarmId,
             snoozeIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Set the snooze time
-        val snoozeTime = Calendar.getInstance().apply {
-            add(Calendar.MINUTE, SNOOZE_MINUTES)
-        }
-
-        try {
-            // Schedule the snoozed alarm
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                snoozeTime.timeInMillis,
-                snoozePendingIntent
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (alarmManager.canScheduleExactAlarms()) {
+                alarmManager.setAlarmClock(
+                    AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent),
+                    pendingIntent
+                )
+            }
+        } else {
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent),
+                pendingIntent
             )
-
-            val formattedTime = java.text.SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                .format(snoozeTime.time)
-            Log.d(TAG, "Snoozed alarm scheduled for: $formattedTime")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to schedule snooze alarm", e)
         }
+
+        // Cancel current notification
+        val notificationManager = NotificationManagerCompat.from(context)
+        notificationManager.cancel(alarmId)
+
+        Log.d(
+            TAG,
+            "Alarm snoozed for $snoozeDuration minutes. Snooze count: ${currentSnoozeCount + 1}/$maxSnoozeCount"
+        )
     }
 }

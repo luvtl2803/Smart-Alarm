@@ -1,7 +1,14 @@
 <resources>
     <string name="app_name">Smart Alarm</string>
-    <string name="home">Home</string>
-    <string name="streak">Streak</string>
-    <string name="alarm">Alarm</string>
-    <string name="user">User</string>
+    <string name="home">Trang chủ</string>
+    <string name="streak">Chuỗi</string>
+    <string name="alarm">Báo thức</string>
+    <string name="user">Cá nhân</string>
+    <string name="cancel">Quay lại</string>
+    <string name="set_alarm">Đặt báo thức</string>
+    <string name="save">Hoàn tất</string>
+    <string name="repeat">Lặp lại</string>
+    <string name="vibrate">Rung</string>
+    <string name="sound">Âm thanh</string>
+    <string name="preview_alarm">Xem trước báo thức"</string>
 </resources>

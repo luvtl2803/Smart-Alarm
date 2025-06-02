@@ -2,8 +2,8 @@ package com.anhq.smartalarm.app.navigation
 
 import com.anhq.smartalarm.R
 import com.anhq.smartalarm.features.alarm.navigation.AlarmRoute
-import com.anhq.smartalarm.features.editalarm.navigation.EditAlarmRoute
 import com.anhq.smartalarm.features.home.navigation.HomeRoute
+import com.anhq.smartalarm.features.setting.navigation.SettingRoute
 import com.anhq.smartalarm.features.statistics.navigation.StatisticsRoute
 import kotlin.reflect.KClass
 
@@ -28,10 +28,9 @@ enum class TopLevelDestination(
         iconId = R.drawable.ic_clock,
         route = AlarmRoute::class
     ),
-//    USER(
-//        labelId = R.string.user,
-//        selectedIconId = R.drawable.ic_user,
-//        unSelectedIconId = R.drawable.ic_user,
-//        route = NewTaskRoute::class
-//    )
+    USER(
+        labelId = R.string.user,
+        iconId = R.drawable.ic_user,
+        route = SettingRoute::class
+    )
 }

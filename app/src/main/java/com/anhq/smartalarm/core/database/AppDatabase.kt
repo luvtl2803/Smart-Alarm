@@ -3,18 +3,17 @@ package com.anhq.smartalarm.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.anhq.smartalarm.core.database.converter.AlarmGameTypeConverter
+import com.anhq.smartalarm.core.database.converter.DayOfWeekSetConverter
 import com.anhq.smartalarm.core.database.dao.AlarmDao
 import com.anhq.smartalarm.core.database.model.AlarmEntity
-import com.anhq.smartalarm.core.database.model.Converters
 
 @Database(
-    entities = [
-        AlarmEntity::class
-    ],
+    entities = [AlarmEntity::class],
     version = 1,
     exportSchema = false
 )
-@TypeConverters(Converters::class)
-abstract class AppDatabase : RoomDatabase() {
+@TypeConverters(value = [DayOfWeekSetConverter::class, AlarmGameTypeConverter::class])
+abstract class AlarmDatabase : RoomDatabase() {
     abstract fun alarmDao(): AlarmDao
-}
+} 

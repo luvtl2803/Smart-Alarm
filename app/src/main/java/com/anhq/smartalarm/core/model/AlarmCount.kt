@@ -11,12 +11,4 @@ data class AlarmCount(
     }
 }
 
-enum class DayOfWeek(val label: String) {
-    SUN("Sun"),
-    MON("Mon"),
-    TUE("Tue"),
-    WED("Wed"),
-    THU("Thu"),
-    FRI("Fri"),
-    SAT("Sat");
-}
+

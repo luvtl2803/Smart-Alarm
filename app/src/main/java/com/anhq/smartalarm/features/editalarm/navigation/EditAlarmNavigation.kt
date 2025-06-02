@@ -26,7 +26,7 @@ fun NavGraphBuilder.editAlarmScreen(
     composable<EditAlarmRoute> {
         EditAlarmRoute(
             onCancelClick = onCancelClick,
-            onUpdateClick = onUpdateClick
+            onSaveClick = onUpdateClick
         )
     }
 }

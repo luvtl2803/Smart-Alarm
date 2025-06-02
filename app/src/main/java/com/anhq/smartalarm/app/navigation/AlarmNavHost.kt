@@ -11,6 +11,7 @@ import com.anhq.smartalarm.features.alarm.navigation.alarmScreen
 import com.anhq.smartalarm.features.editalarm.navigation.editAlarmScreen
 import com.anhq.smartalarm.features.home.navigation.HomeRoute
 import com.anhq.smartalarm.features.home.navigation.homeScreen
+import com.anhq.smartalarm.features.setting.navigation.settingScreen
 import com.anhq.smartalarm.features.statistics.navigation.statisticsScreen
 
 @Composable
@@ -31,6 +32,8 @@ fun AlarmNavHost(
         homeScreen()
 
         statisticsScreen()
+
+        settingScreen()
 
         alarmScreen(
             navController = navController

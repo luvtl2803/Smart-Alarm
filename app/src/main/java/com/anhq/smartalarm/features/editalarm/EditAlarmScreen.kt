@@ -1,8 +1,10 @@
 package com.anhq.smartalarm.features.editalarm
 
-import androidx.compose.foundation.Image
+import android.app.Activity
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,9 +23,9 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -32,17 +34,17 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePickerState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,93 +54,111 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anhq.smartalarm.R
 import com.anhq.smartalarm.core.designsystem.theme.Pure01
 import com.anhq.smartalarm.core.designsystem.theme.Pure02
+import com.anhq.smartalarm.core.designsystem.theme.SmartAlarmTheme
+import com.anhq.smartalarm.core.designsystem.theme.body4
 import com.anhq.smartalarm.core.designsystem.theme.body5
 import com.anhq.smartalarm.core.designsystem.theme.gradient1
 import com.anhq.smartalarm.core.designsystem.theme.label1
 import com.anhq.smartalarm.core.designsystem.theme.label2
 import com.anhq.smartalarm.core.designsystem.theme.label3
-import com.anhq.smartalarm.core.model.Alarm
-import com.anhq.smartalarm.core.model.AlarmCount
-import com.anhq.smartalarm.core.model.AlarmGame
-import com.anhq.smartalarm.core.model.NameOfGame
+import com.anhq.smartalarm.core.model.AlarmGameType
+import com.anhq.smartalarm.core.model.DayOfWeek
 import com.anhq.smartalarm.core.ui.InputTextDialog
-import java.util.Calendar
+import com.anhq.smartalarm.core.utils.AlarmSound
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditAlarmRoute(
     onCancelClick: () -> Unit,
-    onUpdateClick: () -> Unit,
+    onSaveClick: () -> Unit,
 ) {
     val viewModel: EditAlarmViewModel = hiltViewModel()
     val permissionRequired = viewModel.permissionRequired.value
 
-    val myAlarm by viewModel.alarm.collectAsStateWithLifecycle()
     val label by viewModel.label.collectAsStateWithLifecycle()
-    val repeatDays by viewModel.repeatDays.collectAsStateWithLifecycle()
+    val selectedDays by viewModel.selectedDays.collectAsStateWithLifecycle()
     val isVibrate by viewModel.isVibrate.collectAsStateWithLifecycle()
+    val gameType by viewModel.gameType.collectAsStateWithLifecycle()
+    val alarmSounds by viewModel.alarmSounds.collectAsStateWithLifecycle()
+    val selectedSound by viewModel.selectedSound.collectAsStateWithLifecycle()
+    val timePickerState by viewModel.timePickerState.collectAsStateWithLifecycle()
 
-
-    myAlarm?.let { alarm ->
-        EditAlarmScreen(
-            alarm = alarm,
-            onCancelClick = onCancelClick,
-            onUpdateClick = {
-                if (permissionRequired == true) {
-                    viewModel.getExactAlarmPermissionIntent()
-                } else {
-                    viewModel.updateAlarm()
-                    onUpdateClick()
-                }
+    EditAlarmScreen(
+        onCancelClick = onCancelClick,
+        onSaveClick = {
+            if (permissionRequired == true) {
+                viewModel.getExactAlarmPermissionIntent()
+            } else {
+                viewModel.updateAlarm()
+                onSaveClick()
+            }
         },
         label = label,
-            getTimePickerState = { timePickerState ->
-                viewModel.setTime(timePickerState.hour, timePickerState.minute)
-            },
-        setLabel = {
-            viewModel.setLabel(it)
-        },
-        repeatDays = repeatDays,
-        setRepeatDays = {
-            viewModel.setRepeatDays(it)
-        },
+        setLabel = { viewModel.setLabel(it) },
+        setTimePickerState = { viewModel.setTimePickerState(it) },
+        selectedDays = selectedDays,
+        toggleDay = { viewModel.toggleDay(it) },
         isVibrate = isVibrate,
-        setVibrate = {
-            viewModel.setIsVibrate(!isVibrate)
-        }
-        )
-    }
+        setVibrate = { viewModel.setIsVibrate(!isVibrate) },
+        gameType = gameType,
+        setGameType = { viewModel.setGameType(it) },
+        alarmSounds = alarmSounds,
+        selectedSound = selectedSound,
+        setAlarmSound = { viewModel.setAlarmSound(it) },
+        previewAlarm = { viewModel.previewAlarm() },
+        stopPreview = { viewModel.stopPreview() },
+        timePickerState = timePickerState
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditAlarmScreen(
-    alarm: Alarm,
     onCancelClick: () -> Unit,
-    onUpdateClick: () -> Unit,
+    onSaveClick: () -> Unit,
     label: String,
-    getTimePickerState: (TimePickerState) -> Unit,
     setLabel: (String) -> Unit,
-    repeatDays: List<Int>,
-    setRepeatDays: (List<Int>) -> Unit,
+    selectedDays: Set<DayOfWeek>,
+    toggleDay: (DayOfWeek) -> Unit,
+    setTimePickerState: (TimePickerState) -> Unit,
     isVibrate: Boolean,
     setVibrate: () -> Unit,
+    gameType: AlarmGameType,
+    setGameType: (AlarmGameType) -> Unit,
+    alarmSounds: List<AlarmSound>,
+    selectedSound: AlarmSound?,
+    setAlarmSound: (AlarmSound) -> Unit,
+    previewAlarm: () -> Intent?,
+    stopPreview: () -> Unit,
+    timePickerState: TimePickerState?
 ) {
     var isEditName by remember { mutableStateOf(false) }
+    var showSoundPicker by remember { mutableStateOf(false) }
+    var isPreviewing by remember { mutableStateOf(false) }
 
-    val timePickerState = rememberTimePickerState(
-        initialHour = alarm.hour,
-        initialMinute = alarm.minute,
-        is24Hour = true
-    )
+    // Activity result launcher for game preview
+    val gameLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        // Reset preview state when returning from game
+        if (result.resultCode == Activity.RESULT_OK || result.resultCode == Activity.RESULT_CANCELED) {
+            isPreviewing = false
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            stopPreview()
+        }
+    }
 
     Scaffold(
         content = { innerPadding ->
@@ -149,162 +169,274 @@ fun EditAlarmScreen(
                     .padding(WindowInsets.statusBars.asPaddingValues()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Top Bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp)
-                        .wrapContentHeight(),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        modifier = Modifier.clickable {
-                            onCancelClick()
-                        },
+                        modifier = Modifier.clickable { onCancelClick() },
                         text = "Cancel",
                         style = MaterialTheme.typography.gradient1,
                     )
                     Text(
-                        text = "Set Alarm",
+                        text = "Edit Alarm",
                         style = MaterialTheme.typography.label1,
                     )
-
                     Text(
                         modifier = Modifier.clickable {
-                            getTimePickerState(timePickerState)
-                            onUpdateClick()
+                            timePickerState?.let { setTimePickerState(it) }
+                            onSaveClick()
                         },
                         text = "Save",
                         style = MaterialTheme.typography.gradient1,
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Row(
+                // Time Input Section
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 15.dp)
+                        .padding(horizontal = 16.dp)
                         .wrapContentHeight(),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.label2,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
-                    IconButton(
-                        onClick = { isEditName = !isEditName }
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_pencil),
-                            contentDescription = null
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                TimeInput(
-                    state = timePickerState
-                )
-
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Alarm Name
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Repeat",
-                                style = MaterialTheme.typography.label2
+                                text = label,
+                                style = MaterialTheme.typography.label2,
                             )
-
-                            IconButton(
-                                onClick = { }
-                            ) {
+                            IconButton(onClick = { isEditName = true }) {
                                 Icon(
-                                    painter = painterResource(R.drawable.ic_arrow_down),
-                                    contentDescription = null
+                                    painter = painterResource(R.drawable.ic_pencil),
+                                    contentDescription = "Edit alarm name"
+                                )
+                            }
+                        }
+
+                        // Time Picker
+                        timePickerState?.let {
+                            TimeInput(
+                                state = it,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Settings Section
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    // Repeat Section
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = "Repeat",
+                                    style = MaterialTheme.typography.label2,
+                                    modifier = Modifier.padding(bottom = 20.dp)
+                                )
+                                RepeatAlarmButton(
+                                    selectedDays = selectedDays,
+                                    toggleDay = toggleDay
                                 )
                             }
                         }
                     }
 
-
+                    // Wake Up Challenge Section
                     item {
-                        RepeatAlarmButton(
-                            alarmCounts = AlarmCount.defaultCounts.toList(),
-                            repeatDays = repeatDays,
-                            setRepeatDays = { setRepeatDays(it) })
-                    }
-
-                    item {
-                        SoundAlarmButton()
-                    }
-
-                    item {
-                        VolumeSlider()
-                    }
-
-                    item {
-                        Row(
+                        Card(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Vibrate",
-                                style = MaterialTheme.typography.label2
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
                             )
-
-                            Switch(
-                                checked = isVibrate,
-                                onCheckedChange = { setVibrate() } ,
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = Color(0xFFB388FF)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = "Wake Up Challenge",
+                                    style = MaterialTheme.typography.label2,
+                                    modifier = Modifier.padding(bottom = 8.dp)
                                 )
-                            )
+                                AlarmGameType.entries.forEach { type ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { setGameType(type) },
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = when (type) {
+                                                AlarmGameType.NONE -> "No Challenge"
+                                                AlarmGameType.MATH_PROBLEM -> "Math Problem"
+                                                AlarmGameType.MEMORY_TILES -> "Memory Tiles"
+                                                AlarmGameType.SHAKE_PHONE -> "Shake Phone"
+                                            },
+                                            style = MaterialTheme.typography.body5
+                                        )
+                                        RadioButton(
+                                            selected = gameType == type,
+                                            onClick = { setGameType(type) }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
+                    // Sound Settings Section
                     item {
-                        Row(
-                            Modifier.fillMaxWidth()
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
                         ) {
-                            Text(
-                                text = "Alarm Game",
-                                style = MaterialTheme.typography.label2
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            ) {
+                                // Sound Selection
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { showSoundPicker = true },
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Sound",
+                                            style = MaterialTheme.typography.label2
+                                        )
+                                        Text(
+                                            text = selectedSound?.title ?: "Default",
+                                            style = MaterialTheme.typography.body4,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_arrow_right),
+                                        contentDescription = "Select sound"
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Vibration Toggle
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Vibrate",
+                                        style = MaterialTheme.typography.label2
+                                    )
+                                    Switch(
+                                        checked = isVibrate,
+                                        onCheckedChange = { setVibrate() },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = Color(0xFFB388FF)
+                                        )
+                                    )
+                                }
+                            }
                         }
+                    }
 
-                        Spacer(Modifier.height(20.dp))
-
-//                        GameAlarmButton(
-//                            alarmGames = AlarmGame.defaultGames,
-//                            selectedGame = selectedGame.value,
-//                            onGameSelected = { selectedGame.value = it }
-//                        )
+                    // Preview/Stop Button
+                    item {
+                        Button(
+                            onClick = { 
+                                if (isPreviewing) {
+                                    stopPreview()
+                                    isPreviewing = false
+                                } else {
+                                    if (gameType == AlarmGameType.NONE) {
+                                        // Just preview sound/vibration
+                                        previewAlarm()
+                                        isPreviewing = true
+                                    } else {
+                                        // Launch game and let activity result handle the state
+                                        val gameIntent = previewAlarm()
+                                        gameIntent?.let { intent ->
+                                            gameLauncher.launch(intent)
+                                            isPreviewing = true
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isPreviewing) 
+                                    MaterialTheme.colorScheme.error 
+                                else 
+                                    MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(
+                                        if (isPreviewing) R.drawable.ic_stop else R.drawable.ic_game
+                                    ),
+                                    contentDescription = if (isPreviewing) "Stop preview" else "Preview alarm",
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (isPreviewing) "Stop Preview" else "Preview Alarm",
+                                    style = MaterialTheme.typography.label2
+                                )
+                            }
+                        }
                     }
 
                     item {
-                        PreviewAlarm()
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
 
+                // Dialogs
                 if (isEditName) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -319,7 +451,44 @@ fun EditAlarmScreen(
                             }
                         )
                     }
+                }
 
+                if (showSoundPicker) {
+                    AlertDialog(
+                        onDismissRequest = { showSoundPicker = false },
+                        title = { Text("Select Alarm Sound") },
+                        text = {
+                            LazyColumn {
+                                items(alarmSounds) { sound ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                setAlarmSound(sound)
+                                                showSoundPicker = false
+                                            }
+                                            .padding(vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(sound.title)
+                                        if (selectedSound?.uri == sound.uri) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_arrow_right),
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showSoundPicker = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -328,9 +497,8 @@ fun EditAlarmScreen(
 
 @Composable
 fun RepeatAlarmButton(
-    alarmCounts: List<AlarmCount>,
-    repeatDays: List<Int>,
-    setRepeatDays: (List<Int>) -> Unit
+    selectedDays: Set<DayOfWeek>,
+    toggleDay: (DayOfWeek) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -339,19 +507,10 @@ fun RepeatAlarmButton(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        alarmCounts.forEachIndexed { index, alarmCount ->
-            val isSelected = repeatDays.contains(index)
-
+        DayOfWeek.entries.forEach { day ->
+            val isSelected = selectedDays.contains(day)
             Button(
-                onClick = {
-                    val updatedDays = repeatDays.toMutableList()
-                    if (isSelected) {
-                        updatedDays.remove(index)
-                    } else {
-                        updatedDays.add(index)
-                    }
-                    setRepeatDays(updatedDays)
-                },
+                onClick = { toggleDay(day) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent
                 ),
@@ -362,18 +521,19 @@ fun RepeatAlarmButton(
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         if (isSelected) {
-                            Brush.horizontalGradient(
-                                colors = listOf(Pure01, Pure02)
-                            )
+                            Brush.horizontalGradient(colors = listOf(Pure01, Pure02))
                         } else {
                             Brush.horizontalGradient(
-                                colors = listOf(Color(0xFF2C2C2E), Color(0xFF2C2C2E))
+                                colors = listOf(
+                                    Color(0xFF2C2C2E),
+                                    Color(0xFF2C2C2E)
+                                )
                             )
                         }
                     )
             ) {
                 Text(
-                    text = alarmCount.dayOfWeek.label,
+                    text = day.label,
                     style = MaterialTheme.typography.label3,
                     color = Color.White
                 )
@@ -382,199 +542,36 @@ fun RepeatAlarmButton(
     }
 }
 
-
-@Composable
-fun SoundAlarmButton(
-
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Sound",
-                style = MaterialTheme.typography.label2
-            )
-
-            Spacer(modifier = Modifier.height(5.dp))
-
-            Text(
-                text = "My sound 123", style = MaterialTheme.typography.body5
-            )
-        }
-
-        IconButton(
-            onClick = { }
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_arrow_right),
-                contentDescription = null
-            )
-        }
-    }
-}
-
-@Composable
-fun VolumeSlider(
-
-) {
-    var sliderPosition by remember { mutableFloatStateOf(0.4f) }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "Volume",
-                style = MaterialTheme.typography.label2
-            )
-
-            Text(
-                text = "${(sliderPosition * 100).toInt()}%",
-                style = MaterialTheme.typography.label2
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier.height(20.dp))
-
-    Slider(
-        modifier = Modifier
-            .height(10.dp)
-            .padding(horizontal = 10.dp),
-        value = sliderPosition,
-        onValueChange = {
-            sliderPosition = it
-        },
-        valueRange = 0f..1f,
-    )
-}
-
-@Composable
-fun GameAlarmButton(
-    alarmGames: List<AlarmGame>,
-    selectedGame: NameOfGame?,
-    onGameSelected: (NameOfGame) -> Unit
-) {
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        items(alarmGames) { alarmGame ->
-            val isSelected = alarmGame.gameName == selectedGame
-
-            Card(
-                modifier = Modifier
-                    .width(100.dp)
-                    .height(120.dp)
-                    .border(
-                        width = if (isSelected) 5.dp else 0.dp,
-                        color = if (isSelected) Color.Cyan else Color.Transparent,
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .clickable { onGameSelected(alarmGame.gameName) },
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF3C3D3F)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(6.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_launcher_foreground),
-                        contentDescription = "Game Icon",
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = alarmGame.gameName.label,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun PreviewAlarm() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Preview Alarm",
-            style = MaterialTheme.typography.label2
-        )
-
-        IconButton(
-            onClick = { }
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_arrow_right),
-                contentDescription = null
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
-private fun EditAlarmScreenPreview() {
-    val currentTime = Calendar.getInstance()
-
-    val timePickerState = rememberTimePickerState(
-        initialHour = currentTime.get(Calendar.HOUR_OF_DAY),
-        initialMinute = currentTime.get(Calendar.MINUTE),
-        is24Hour = false,
-    )
-    EditAlarmScreen(
-        alarm = Alarm(
-            id = 1,
-            hour = currentTime.get(Calendar.HOUR_OF_DAY),
-            minute = currentTime.get(Calendar.MINUTE),
-            repeatDays = listOf(),
-            isVibrate = false,
-            label = "Alarm Name",
-            isActive = true,
-            timeInMillis = 0
-        ),
-        onCancelClick = {},
-        onUpdateClick = {},
-        label = "Alarm Name",
-        getTimePickerState = {
-            timePickerState.hour = it.hour
-            timePickerState.minute = it.minute
-        },
-        setLabel = {},
-        repeatDays = listOf(),
-        setRepeatDays = {},
-        isVibrate = false,
-        setVibrate = {}
-    )
+fun EditAlarmScreenPreview() {
+    SmartAlarmTheme {
+        EditAlarmScreen(
+            onCancelClick = {},
+            onSaveClick = {},
+            label = "Morning Alarm",
+            setLabel = {},
+            selectedDays = setOf(DayOfWeek.MON, DayOfWeek.WED),
+            toggleDay = {},
+            setTimePickerState = {},
+            isVibrate = true,
+            setVibrate = {},
+            gameType = AlarmGameType.MATH_PROBLEM,
+            setGameType = {},
+            alarmSounds = listOf(
+                AlarmSound(title = "Classic Ring", uri = "android.resource://com.anhq.smartalarm/raw/ring1".toUri()),
+                AlarmSound(title = "Gentle Wake", uri = "android.resource://com.anhq.smartalarm/raw/ring2".toUri())
+            ),
+            selectedSound = AlarmSound(title = "Classic Ring", uri = "android.resource://com.anhq.smartalarm/raw/ring1".toUri()),
+            setAlarmSound = {},
+            previewAlarm = { null },
+            stopPreview = {},
+            timePickerState = TimePickerState(
+                initialHour = 7,
+                initialMinute = 30,
+                is24Hour = false
+            )
+        )
+    }
 }
