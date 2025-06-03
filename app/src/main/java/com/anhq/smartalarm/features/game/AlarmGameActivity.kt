@@ -1,14 +1,14 @@
 package com.anhq.smartalarm.features.game
 
-import android.app.ActivityManager
+import android.app.KeyguardManager
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.anhq.smartalarm.core.designsystem.theme.SmartAlarmTheme
 import com.anhq.smartalarm.core.utils.AlarmPreviewManager
@@ -27,29 +27,32 @@ class AlarmGameActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Prevent activity from appearing in recent apps
-        val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
-        val tasks = activityManager.appTasks
-        if (tasks.isNotEmpty()) {
-            tasks[0].setExcludeFromRecents(true)
-        }
-
-        // Make the activity full screen and prevent gesture navigation
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.systemBars())
-            hide(WindowInsetsCompat.Type.navigationBars())
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-
+        // Set window flags before calling setContent
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                     WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
                     WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                     WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+            keyguardManager.requestDismissKeyguard(this, null)
+        }
+
+        // Acquire wake lock
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock = powerManager.newWakeLock(
+            PowerManager.FULL_WAKE_LOCK or
+                    PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                    PowerManager.ON_AFTER_RELEASE,
+            "SmartAlarm:AlarmWakeLock"
+        )
+        wakeLock.acquire(10 * 60 * 1000L) // 10 minutes
 
         setContent {
             SmartAlarmTheme {
@@ -67,6 +70,7 @@ class AlarmGameActivity : ComponentActivity() {
                             }
                             sendBroadcast(stopIntent)
                         }
+                        wakeLock.release()
                         setResult(RESULT_OK)
                         finish()
                     },
@@ -82,35 +86,12 @@ class AlarmGameActivity : ComponentActivity() {
                             }
                             sendBroadcast(snoozeIntent)
                         }
+                        wakeLock.release()
                         setResult(RESULT_CANCELED)
                         finish()
                     }
                 )
             }
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            // Re-hide system bars when focus is regained
-            WindowInsetsControllerCompat(window, window.decorView).apply {
-                hide(WindowInsetsCompat.Type.systemBars())
-                hide(WindowInsetsCompat.Type.navigationBars())
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // If activity is destroyed without proper completion/snooze, restart it
-        if (!isFinishing) {
-            val intent = Intent(this, AlarmGameActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtras(getIntent())
-            }
-            startActivity(intent)
         }
     }
 }

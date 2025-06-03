@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
@@ -36,6 +37,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @HiltViewModel
@@ -61,8 +63,6 @@ class AddAlarmViewModel @Inject constructor(
     val alarmSounds: StateFlow<List<AlarmSound>> = _alarmSounds.asStateFlow()
     private val _selectedSound = MutableStateFlow<AlarmSound?>(null)
     val selectedSound: StateFlow<AlarmSound?> = _selectedSound.asStateFlow()
-    private val _timeInMills = MutableStateFlow(0L)
-    private val timeInMills: StateFlow<Long> = _timeInMills.asStateFlow()
     private val _timePickerState = MutableStateFlow(
         TimePickerState(
             initialHour = 0,
@@ -78,18 +78,26 @@ class AddAlarmViewModel @Inject constructor(
     val permissionRequired: LiveData<Boolean> = _permissionRequired
 
     init {
-        loadAlarmSounds()
+        loadSystemAlarmSounds()
         checkAlarmPermission()
     }
 
-    private fun loadAlarmSounds() {
-        _alarmSounds.value = alarmSoundManager.getAllAlarmSounds()
+    private fun loadSystemAlarmSounds() {
+        val noSound = AlarmSound(
+            uri = "".toUri(),
+            title = "Im lặng"
+        )
+
         val defaultAlarmSound = AlarmSound(
             uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-            title = "Default"
+            title = getTitleFromUri(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
         )
+        _alarmSounds.value = listOf(noSound) + listOf(defaultAlarmSound) + alarmSoundManager.getAllAlarmSounds()
         _selectedSound.value = defaultAlarmSound
-        _alarmSounds.value = listOf(defaultAlarmSound) + _alarmSounds.value
+    }
+
+    private fun getTitleFromUri(uri: Uri): String{
+        return alarmSoundManager.getAlarmTitleFromUri(uri)
     }
 
     fun setLabel(label: String) {
@@ -104,8 +112,8 @@ class AddAlarmViewModel @Inject constructor(
         _isVibrate.value = isVibrate
     }
 
-    fun setAlarmSound(sound: AlarmSound) {
-        _selectedSound.value = sound
+    fun setAlarmSound(uri: Uri) {
+        _selectedSound.value = AlarmSound(uri, getTitleFromUri(uri))
     }
 
     fun previewAlarm(): Intent {
@@ -138,16 +146,6 @@ class AddAlarmViewModel @Inject constructor(
         } else {
             _selectedDays.value + day
         }
-    }
-
-    fun setTimeInMills() {
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, _timePickerState.value.hour)
-            set(Calendar.MINUTE, _timePickerState.value.minute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        _timeInMills.value = calendar.timeInMillis
     }
 
     fun setGameType(type: AlarmGameType) {

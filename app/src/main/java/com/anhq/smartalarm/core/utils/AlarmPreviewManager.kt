@@ -20,7 +20,7 @@ class AlarmPreviewManager @Inject constructor(
 ) {
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
-    private val vibrationPattern = longArrayOf(0, 500, 500)
+    private val vibrationPattern = longArrayOf(0, 1000, 200, 1000, 200, 1000, 200, 1000)
 
     fun startPreview(soundUri: Uri?, isVibrate: Boolean) {
         stopPreview()

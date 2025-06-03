@@ -36,48 +36,51 @@ import com.anhq.smartalarm.R
 import com.anhq.smartalarm.core.designsystem.theme.gradient1
 import com.anhq.smartalarm.core.designsystem.theme.label1
 import com.anhq.smartalarm.core.designsystem.theme.title1
+import com.anhq.smartalarm.core.ui.BottomNavScreen
 
 @Composable
-fun HomeRoute(
-
-) {
+fun HomeRoute() {
     HomeScreen()
 }
 
 @Composable
-fun HomeScreen(
-
-) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Card(
-            Modifier
-                .wrapContentSize()
-                .padding(horizontal = 10.dp)
-                .background(color = Color(0xFF3C3D3F), shape = RoundedCornerShape(size = 16.dp)),
-            content = {
+fun HomeScreen() {
+    BottomNavScreen(
+        topBar = {
+            Text(
+                text = "Trang chủ",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(color = Color(0xFF3C3D3F), shape = RoundedCornerShape(16.dp))
+            ) {
                 Text(
                     modifier = Modifier.padding(20.dp),
                     text = "Don't stop when you are tired STOP when you're DONE",
                     style = MaterialTheme.typography.title1
                 )
             }
-        )
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Card(
-            Modifier
-                .wrapContentSize()
-                .padding(horizontal = 10.dp)
-                .background(color = Color(0xFF3C3D3F), shape = RoundedCornerShape(size = 16.dp)),
-            content = {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(color = Color(0xFF3C3D3F), shape = RoundedCornerShape(16.dp))
+            ) {
                 AlarmCard()
             }
-        )
+        }
     }
 }
 

@@ -6,10 +6,14 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.anhq.smartalarm.core.model.AlarmGameType
+import com.anhq.smartalarm.core.model.GameDifficulty
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-class ShakePhoneGame(private val context: Context) : AlarmGame(), SensorEventListener {
+class ShakePhoneGame(
+    private val context: Context,
+    private val difficulty: GameDifficulty
+) : AlarmGame(), SensorEventListener {
     override val type = AlarmGameType.SHAKE_PHONE
     override val title = "Shake Phone"
     override val description = "Shake your phone to stop the alarm"
@@ -21,8 +25,25 @@ class ShakePhoneGame(private val context: Context) : AlarmGame(), SensorEventLis
     private var lastY: Float = 0.0f
     private var lastZ: Float = 0.0f
     
-    private val shakeThreshold = 800f // Ngưỡng để xác định lắc
-    private val requiredShakes = 5 // Số lần lắc cần thiết
+    private val shakeThreshold = when (difficulty) {
+        GameDifficulty.EASY -> 600f     // Lắc nhẹ
+        GameDifficulty.MEDIUM -> 800f   // Lắc vừa
+        GameDifficulty.HARD -> 1000f    // Lắc mạnh
+    }
+    
+    private val requiredShakes = when (difficulty) {
+        GameDifficulty.EASY -> 3    // 3 lần lắc
+        GameDifficulty.MEDIUM -> 5  // 5 lần lắc
+        GameDifficulty.HARD -> 7    // 7 lần lắc
+    }
+    
+    private val minShakeInterval = when (difficulty) {
+        GameDifficulty.EASY -> 0L       // Không giới hạn
+        GameDifficulty.MEDIUM -> 200L   // 0.2 giây giữa các lần lắc
+        GameDifficulty.HARD -> 500L     // 0.5 giây giữa các lần lắc
+    }
+    
+    private var lastShakeTime: Long = 0
     private var shakeCount = 0
 
     var onShake: ((Int, Int) -> Unit)? = null // Callback khi lắc (số lần đã lắc, tổng số lần cần lắc)
@@ -46,6 +67,7 @@ class ShakePhoneGame(private val context: Context) : AlarmGame(), SensorEventLis
         )
         // Reset and show initial counter when starting
         shakeCount = 0
+        lastShakeTime = 0
         onShake?.invoke(shakeCount, requiredShakes)
     }
 
@@ -69,7 +91,11 @@ class ShakePhoneGame(private val context: Context) : AlarmGame(), SensorEventLis
                     val speed = abs(x + y + z - lastX - lastY - lastZ) / diffTime * 10000
 
                     if (speed > shakeThreshold) {
-                        onShake()
+                        // Kiểm tra khoảng thời gian giữa các lần lắc
+                        if (curTime - lastShakeTime > minShakeInterval) {
+                            onShake()
+                            lastShakeTime = curTime
+                        }
                     }
 
                     lastX = x
@@ -99,6 +125,7 @@ class ShakePhoneGame(private val context: Context) : AlarmGame(), SensorEventLis
         isCompleted = false
         shakeCount = 0
         lastUpdate = 0
+        lastShakeTime = 0
         lastX = 0.0f
         lastY = 0.0f
         lastZ = 0.0f

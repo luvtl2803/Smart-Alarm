@@ -83,6 +83,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.core.splashscreen)
+    implementation("com.airbnb.android:lottie-compose:6.3.0")
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
     // hilt
     implementation(libs.hilt.android)

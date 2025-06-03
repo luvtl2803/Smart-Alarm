@@ -2,10 +2,11 @@ package com.anhq.smartalarm.features.setting
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.anhq.smartalarm.features.setting.data.SettingDataStore
-import com.anhq.smartalarm.features.setting.model.GameDifficulty
-import com.anhq.smartalarm.features.setting.model.SettingsUiState
-import com.anhq.smartalarm.features.setting.model.ThemeOption
+import com.anhq.smartalarm.core.designsystem.theme.ThemeManager
+import com.anhq.smartalarm.core.model.GameDifficulty
+import com.anhq.smartalarm.core.model.SettingsUiState
+import com.anhq.smartalarm.core.model.ThemeOption
+import com.anhq.smartalarm.core.sharereference.PreferenceHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingViewModel @Inject constructor(
-    private val settingDataStore: SettingDataStore
+    private val preferenceHelper: PreferenceHelper,
+    private val themeManager: ThemeManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -28,14 +30,13 @@ class SettingViewModel @Inject constructor(
 
     private fun loadSettings() {
         viewModelScope.launch {
-            settingDataStore.settingsFlow.collect { settings ->
-                _uiState.update { currentState ->
-                    currentState.copy(
+            preferenceHelper.settingsFlow.collect { settings ->
+                _uiState.update {
+                    it.copy(
                         theme = settings.theme,
                         gameDifficulty = settings.gameDifficulty,
                         snoozeDurationMinutes = settings.snoozeDurationMinutes,
                         maxSnoozeCount = settings.maxSnoozeCount,
-                        isDirty = false
                     )
                 }
             }
@@ -43,46 +44,28 @@ class SettingViewModel @Inject constructor(
     }
 
     fun updateTheme(theme: ThemeOption) {
-        _uiState.update { 
-            it.copy(
-                theme = theme,
-                isDirty = true
-            )
-        }
+        _uiState.update { it.copy(theme = theme) }
+        themeManager.updateTheme(theme)
     }
 
     fun updateGameDifficulty(difficulty: GameDifficulty) {
-        _uiState.update { 
-            it.copy(
-                gameDifficulty = difficulty,
-                isDirty = true
-            )
-        }
+        _uiState.update { it.copy(gameDifficulty = difficulty)}
     }
 
     fun updateSnoozeDuration(minutes: Int) {
-        _uiState.update { 
-            it.copy(
-                snoozeDurationMinutes = minutes,
-                isDirty = true
-            )
-        }
+        _uiState.update { it.copy(snoozeDurationMinutes = minutes) }
     }
 
     fun updateMaxSnoozeCount(count: Int) {
-        _uiState.update { 
-            it.copy(
-                maxSnoozeCount = count,
-                isDirty = true
-            )
-        }
+        _uiState.update { it.copy(maxSnoozeCount = count) }
     }
 
     fun saveSettings() {
         viewModelScope.launch {
-            settingDataStore.updateSettings(uiState.value.copy(isDirty = false))
-            _uiState.update { it.copy(isDirty = false) }
+            preferenceHelper.updateSettings(uiState.value.copy())
+            _uiState.update { it.copy() }
         }
     }
 }
+
 

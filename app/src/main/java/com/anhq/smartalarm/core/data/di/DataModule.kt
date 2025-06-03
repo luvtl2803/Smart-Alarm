@@ -11,5 +11,5 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 abstract class DataModule {
     @Binds
-    abstract fun provideTaskRepository(default: DefaultAlarmRepository): AlarmRepository
+    abstract fun provideAlarmRepository(default: DefaultAlarmRepository): AlarmRepository
 }

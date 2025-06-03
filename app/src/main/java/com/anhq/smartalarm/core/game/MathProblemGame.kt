@@ -1,9 +1,10 @@
 package com.anhq.smartalarm.core.game
 
 import com.anhq.smartalarm.core.model.AlarmGameType
+import com.anhq.smartalarm.core.model.GameDifficulty
 import kotlin.random.Random
 
-class MathProblemGame : AlarmGame() {
+class MathProblemGame(private val difficulty: GameDifficulty) : AlarmGame() {
     override val type = AlarmGameType.MATH_PROBLEM
     override val title = "Math Problem"
     override val description = "Solve the math problem to stop the alarm"
@@ -41,24 +42,48 @@ class MathProblemGame : AlarmGame() {
     }
 
     private fun generateNewProblem() {
-        operation = MathOperation.entries.toTypedArray()[Random.nextInt(MathOperation.entries.size)]
-        
+        // Chọn phép tính dựa trên độ khó
+        operation = when (difficulty) {
+            GameDifficulty.EASY -> MathOperation.entries[Random.nextInt(2)] // Chỉ + hoặc -
+            GameDifficulty.MEDIUM -> MathOperation.entries.random() // Tất cả các phép tính
+            GameDifficulty.HARD -> MathOperation.entries.random() // Tất cả nhưng số lớn hơn
+        }
+
         when (operation) {
             MathOperation.ADDITION -> {
-                firstNumber = Random.nextInt(1, 50)
-                secondNumber = Random.nextInt(1, 50)
+                firstNumber = generateNumberForAddition()
+                secondNumber = generateNumberForAddition()
                 correctAnswer = firstNumber + secondNumber
             }
             MathOperation.SUBTRACTION -> {
-                firstNumber = Random.nextInt(10, 100)
+                // Đảm bảo kết quả luôn dương
+                firstNumber = generateNumberForSubtraction()
                 secondNumber = Random.nextInt(1, firstNumber)
                 correctAnswer = firstNumber - secondNumber
             }
             MathOperation.MULTIPLICATION -> {
-                firstNumber = Random.nextInt(2, 12)
-                secondNumber = Random.nextInt(2, 12)
+                firstNumber = generateNumberForMultiplication()
+                secondNumber = generateNumberForMultiplication()
                 correctAnswer = firstNumber * secondNumber
             }
         }
     }
-} 
+
+    private fun generateNumberForAddition(): Int = when (difficulty) {
+        GameDifficulty.EASY -> Random.nextInt(1, 10)     // 1-9
+        GameDifficulty.MEDIUM -> Random.nextInt(10, 50)  // 10-49
+        GameDifficulty.HARD -> Random.nextInt(50, 100)   // 50-99
+    }
+
+    private fun generateNumberForSubtraction(): Int = when (difficulty) {
+        GameDifficulty.EASY -> Random.nextInt(5, 20)     // 5-19
+        GameDifficulty.MEDIUM -> Random.nextInt(20, 50)  // 20-49
+        GameDifficulty.HARD -> Random.nextInt(50, 100)   // 50-99
+    }
+
+    private fun generateNumberForMultiplication(): Int = when (difficulty) {
+        GameDifficulty.EASY -> Random.nextInt(2, 5)      // 2-4
+        GameDifficulty.MEDIUM -> Random.nextInt(5, 10)   // 5-9
+        GameDifficulty.HARD -> Random.nextInt(10, 15)    // 10-14
+    }
+}

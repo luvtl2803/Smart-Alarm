@@ -14,22 +14,22 @@ enum class TopLevelDestination(
     val route: KClass<*>,
 ) {
     HOME(
-        labelId = R.string.home,
+        labelId = R.string.nav_home,
         iconId = R.drawable.ic_home,
         route = HomeRoute::class,
     ),
     STATISTICS(
-        labelId = R.string.streak,
+        labelId = R.string.nav_statistics,
         iconId = R.drawable.ic_streak,
         route = StatisticsRoute::class
     ),
     ALARM(
-        labelId = R.string.alarm,
+        labelId = R.string.nav_alarm,
         iconId = R.drawable.ic_clock,
         route = AlarmRoute::class
     ),
     USER(
-        labelId = R.string.user,
+        labelId = R.string.nav_settings,
         iconId = R.drawable.ic_user,
         route = SettingRoute::class
     )

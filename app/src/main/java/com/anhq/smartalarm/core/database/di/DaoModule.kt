@@ -10,5 +10,5 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 class DaoModule {
     @Provides
-    fun providesTaskDao(database: AlarmDatabase) = database.alarmDao()
+    fun providesAlarmDao(database: AlarmDatabase) = database.alarmDao()
 }

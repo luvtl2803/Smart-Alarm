@@ -2,6 +2,7 @@ package com.anhq.smartalarm.features.editalarm
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -12,14 +13,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,6 +29,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +53,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -135,7 +136,7 @@ fun EditAlarmScreen(
     setGameType: (AlarmGameType) -> Unit,
     alarmSounds: List<AlarmSound>,
     selectedSound: AlarmSound?,
-    setAlarmSound: (AlarmSound) -> Unit,
+    setAlarmSound: (Uri) -> Unit,
     previewAlarm: () -> Intent?,
     stopPreview: () -> Unit,
     timePickerState: TimePickerState?
@@ -148,11 +149,19 @@ fun EditAlarmScreen(
     val gameLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        // Reset preview state when returning from game
         if (result.resultCode == Activity.RESULT_OK || result.resultCode == Activity.RESULT_CANCELED) {
             isPreviewing = false
         }
     }
+
+    val fileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            setAlarmSound(it)
+        }
+    }
+
 
     DisposableEffect(Unit) {
         onDispose {
@@ -165,8 +174,7 @@ fun EditAlarmScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(WindowInsets.statusBars.asPaddingValues()),
+                    .padding(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Top Bar
@@ -179,11 +187,11 @@ fun EditAlarmScreen(
                 ) {
                     Text(
                         modifier = Modifier.clickable { onCancelClick() },
-                        text = "Cancel",
+                        text = stringResource(R.string.cancel),
                         style = MaterialTheme.typography.gradient1,
                     )
                     Text(
-                        text = "Edit Alarm",
+                        text = stringResource(R.string.edit),
                         style = MaterialTheme.typography.label1,
                     )
                     Text(
@@ -191,7 +199,7 @@ fun EditAlarmScreen(
                             timePickerState?.let { setTimePickerState(it) }
                             onSaveClick()
                         },
-                        text = "Save",
+                        text = stringResource(R.string.save),
                         style = MaterialTheme.typography.gradient1,
                     )
                 }
@@ -241,8 +249,7 @@ fun EditAlarmScreen(
 
                 // Settings Section
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     // Repeat Section
                     item {
@@ -258,7 +265,7 @@ fun EditAlarmScreen(
                                     .padding(16.dp)
                             ) {
                                 Text(
-                                    text = "Repeat",
+                                    text = stringResource(R.string.repeat_days),
                                     style = MaterialTheme.typography.label2,
                                     modifier = Modifier.padding(bottom = 20.dp)
                                 )
@@ -284,7 +291,7 @@ fun EditAlarmScreen(
                                     .padding(16.dp)
                             ) {
                                 Text(
-                                    text = "Wake Up Challenge",
+                                    text = stringResource(R.string.game_type),
                                     style = MaterialTheme.typography.label2,
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
@@ -298,12 +305,11 @@ fun EditAlarmScreen(
                                     ) {
                                         Text(
                                             text = when (type) {
-                                                AlarmGameType.NONE -> "No Challenge"
-                                                AlarmGameType.MATH_PROBLEM -> "Math Problem"
-                                                AlarmGameType.MEMORY_TILES -> "Memory Tiles"
-                                                AlarmGameType.SHAKE_PHONE -> "Shake Phone"
-                                            },
-                                            style = MaterialTheme.typography.body5
+                                                AlarmGameType.NONE -> "Không có thử thách"
+                                                AlarmGameType.MATH_PROBLEM -> "Giải toán"
+                                                AlarmGameType.MEMORY_TILES -> "Ghi nhớ ô"
+                                                AlarmGameType.SHAKE_PHONE -> "Lắc điện thoại"
+                                            }, style = MaterialTheme.typography.body5
                                         )
                                         RadioButton(
                                             selected = gameType == type,
@@ -338,11 +344,11 @@ fun EditAlarmScreen(
                                 ) {
                                     Column {
                                         Text(
-                                            text = "Sound",
+                                            text = stringResource(R.string.sound),
                                             style = MaterialTheme.typography.label2
                                         )
                                         Text(
-                                            text = selectedSound?.title ?: "Default",
+                                            text = selectedSound?.title ?: "Mặc định",
                                             style = MaterialTheme.typography.body4,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -362,7 +368,7 @@ fun EditAlarmScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Vibrate",
+                                        text = "Rung",
                                         style = MaterialTheme.typography.label2
                                     )
                                     Switch(
@@ -381,22 +387,15 @@ fun EditAlarmScreen(
                     // Preview/Stop Button
                     item {
                         Button(
-                            onClick = { 
+                            onClick = {
                                 if (isPreviewing) {
                                     stopPreview()
                                     isPreviewing = false
                                 } else {
-                                    if (gameType == AlarmGameType.NONE) {
-                                        // Just preview sound/vibration
-                                        previewAlarm()
+                                    val gameIntent = previewAlarm()
+                                    gameIntent?.let { intent ->
+                                        gameLauncher.launch(intent)
                                         isPreviewing = true
-                                    } else {
-                                        // Launch game and let activity result handle the state
-                                        val gameIntent = previewAlarm()
-                                        gameIntent?.let { intent ->
-                                            gameLauncher.launch(intent)
-                                            isPreviewing = true
-                                        }
                                     }
                                 }
                             },
@@ -404,10 +403,7 @@ fun EditAlarmScreen(
                                 .fillMaxWidth()
                                 .padding(16.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isPreviewing) 
-                                    MaterialTheme.colorScheme.error 
-                                else 
-                                    MaterialTheme.colorScheme.primary
+                                containerColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
                             Row(
@@ -416,15 +412,13 @@ fun EditAlarmScreen(
                                 modifier = Modifier.padding(vertical = 8.dp)
                             ) {
                                 Icon(
-                                    painter = painterResource(
-                                        if (isPreviewing) R.drawable.ic_stop else R.drawable.ic_game
-                                    ),
-                                    contentDescription = if (isPreviewing) "Stop preview" else "Preview alarm",
+                                    painter = painterResource(R.drawable.ic_game),
+                                    contentDescription = "Preview alarm",
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (isPreviewing) "Stop Preview" else "Preview Alarm",
+                                    text = "Xem trước báo thức",
                                     style = MaterialTheme.typography.label2
                                 )
                             }
@@ -455,28 +449,77 @@ fun EditAlarmScreen(
 
                 if (showSoundPicker) {
                     AlertDialog(
-                        onDismissRequest = { showSoundPicker = false },
-                        title = { Text("Select Alarm Sound") },
+                        modifier = Modifier.height(500.dp),
+                        onDismissRequest = { showSoundPicker = false }, title = {
+                            Text(
+                                modifier = Modifier.fillMaxWidth(),
+                                text = "Âm thanh báo thức",
+                                style = MaterialTheme.typography.label1,
+                                textAlign = TextAlign.Center
+                            )
+                        },
                         text = {
                             LazyColumn {
+
+                                item {
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                fileLauncher.launch("audio/*")
+                                                showSoundPicker = false
+                                            },
+                                        horizontalArrangement = Arrangement.spacedBy(15.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_open_folder),
+                                            contentDescription = "Chọn từ thư viện"
+                                        )
+                                        Text(
+                                            "Chọn từ bộ nhớ",
+                                            style = MaterialTheme.typography.body4
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    HorizontalDivider(thickness = 2.dp)
+
+                                }
+
                                 items(alarmSounds) { sound ->
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
-                                                setAlarmSound(sound)
+                                                setAlarmSound(sound.uri)
                                                 showSoundPicker = false
                                             }
                                             .padding(vertical = 12.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(sound.title)
+                                        verticalAlignment = Alignment.CenterVertically) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(
+                                                    if (sound.uri.toString()
+                                                            .isBlank()
+                                                    ) R.drawable.ic_noti_off else R.drawable.ic_noti_on
+                                                ), contentDescription = "Selected"
+                                            )
+                                            Text(
+                                                sound.title, style = MaterialTheme.typography.body5
+                                            )
+                                        }
+
                                         if (selectedSound?.uri == sound.uri) {
                                             Icon(
-                                                painter = painterResource(R.drawable.ic_arrow_right),
-                                                contentDescription = "Selected",
-                                                tint = MaterialTheme.colorScheme.primary
+                                                painter = painterResource(R.drawable.ic_check_circle),
+                                                contentDescription = "Selected"
                                             )
                                         }
                                     }
@@ -485,10 +528,9 @@ fun EditAlarmScreen(
                         },
                         confirmButton = {
                             TextButton(onClick = { showSoundPicker = false }) {
-                                Text("Cancel")
+                                Text("Chọn")
                             }
-                        }
-                    )
+                        })
                 }
             }
         }

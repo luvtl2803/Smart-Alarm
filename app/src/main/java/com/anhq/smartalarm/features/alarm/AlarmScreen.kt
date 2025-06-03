@@ -52,6 +52,7 @@ import com.anhq.smartalarm.core.designsystem.theme.label3
 import com.anhq.smartalarm.core.model.Alarm
 import com.anhq.smartalarm.core.model.AlarmGameType
 import com.anhq.smartalarm.core.model.DayOfWeek
+import com.anhq.smartalarm.core.ui.BottomNavScreen
 import com.anhq.smartalarm.features.addalarm.navigation.navigateToAddAlarm
 import com.anhq.smartalarm.features.editalarm.navigation.navigateToEditAlarm
 
@@ -83,7 +84,6 @@ fun AlarmRoute(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmScreen(
     alarms: List<Alarm>,
@@ -96,125 +96,96 @@ fun AlarmScreen(
     onToggleAlarmSelection: (Int) -> Unit,
     onDeleteSelected: () -> Unit
 ) {
-    Scaffold(
+    BottomNavScreen(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Báo Thức",
-                        style = MaterialTheme.typography.headline3,
-
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }, colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+            Text(
+                text = "Báo thức",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(16.dp)
             )
-        },
-        content = { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding), verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (alarms.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (alarms.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No alarms set",
-                                style = MaterialTheme.typography.label1,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 20.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            items(
-                                count = alarms.size, key = { alarms[it].id }) { index ->
-                                val alarm = alarms[index]
-                                AlarmItem(
-                                alarm = alarm,
-                                    isSelectionMode = isSelectionMode,
-                                    isSelected = selectedAlarms.contains(alarm.id),
-                                    onAlarmClick = {
-                                        if (isSelectionMode) {
-                                            onToggleAlarmSelection(it.id)
-                                        } else {
-                                            onEditClick(it.id)
-                                        }
-                                    },
-                                    onAlarmLongClick = {
-                                        if (!isSelectionMode) {
-                                            onToggleSelectionMode()
-                                            onToggleAlarmSelection(it.id)
-                                        }
-                                    },
-                                    onAlarmToggle = { setAlarmActive(it, !it.isActive) }
-                            )
-                            }
-                            item {
-                                Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    }
+                    Text(
+                        text = "Chưa có báo thức nào",
+                        style = MaterialTheme.typography.label1,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                    Column(
-                        modifier = Modifier.align(Alignment.BottomEnd)
-                    ) {
-                        if (isSelectionMode) {
-                            FloatingActionButton(
-                                onClick = onToggleSelectionMode,
-                                modifier = Modifier
-                                    .padding(10.dp),
-                                shape = RoundedCornerShape(50.dp),
-                                containerColor = Color.Magenta,
-                                contentColor = Color.White,
-                                content = {
-                                    IconButton(onClick = onToggleSelectionMode) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = "Exit selection mode"
-                                        )
-                                    }
-                                }
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = if (isSelectionMode) onDeleteSelected else onAddClick,
-                            modifier = Modifier
-                                .padding(10.dp),
-                            shape = RoundedCornerShape(50.dp),
-                            containerColor = if (isSelectionMode) Color.Red else Color.Black,
-                            contentColor = Color.White,
-                            content = {
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    items(
+                        count = alarms.size,
+                        key = { alarms[it].id }
+                    ) { index ->
+                        val alarm = alarms[index]
+                        AlarmItem(
+                            alarm = alarm,
+                            isSelectionMode = isSelectionMode,
+                            isSelected = selectedAlarms.contains(alarm.id),
+                            onAlarmClick = {
                                 if (isSelectionMode) {
-                                    IconButton(onClick = onDeleteSelected) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Delete selected"
-                                        )
-                                    }
+                                    onToggleAlarmSelection(it.id)
                                 } else {
-                                    Icon(
-                                        Icons.Default.Add, contentDescription = "Add alarm"
-                                    )
+                                    onEditClick(it.id)
                                 }
-                            }
+                            },
+                            onAlarmLongClick = {
+                                if (!isSelectionMode) {
+                                    onToggleSelectionMode()
+                                    onToggleAlarmSelection(it.id)
+                                }
+                            },
+                            onAlarmToggle = { setAlarmActive(it, !it.isActive) }
                         )
                     }
-
                 }
             }
-        })
+
+            Column(
+                modifier = Modifier.align(Alignment.BottomEnd)
+            ) {
+                if (isSelectionMode) {
+                    FloatingActionButton(
+                        onClick = onToggleSelectionMode,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        shape = RoundedCornerShape(50.dp),
+                        containerColor = Color.Magenta,
+                        contentColor = Color.White
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Exit selection mode"
+                        )
+                    }
+                }
+
+                FloatingActionButton(
+                    onClick = if (isSelectionMode) onDeleteSelected else onAddClick,
+                    shape = RoundedCornerShape(50.dp),
+                    containerColor = if (isSelectionMode) Color.Red else Color.Black,
+                    contentColor = Color.White
+                ) {
+                    Icon(
+                        imageVector = if (isSelectionMode) Icons.Default.Delete else Icons.Default.Add,
+                        contentDescription = if (isSelectionMode) "Delete selected" else "Add alarm"
+                    )
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -237,7 +208,7 @@ fun AlarmItem(
         modifier = modifier
             .fillMaxWidth()
             .background(brush = gradient, shape = RoundedCornerShape(20.dp))
-            .padding(8.dp)
+            .padding(16.dp)
             .combinedClickable(
                 onClick = { onAlarmClick(alarm) },
                 onLongClick = { onAlarmLongClick(alarm) })
@@ -245,7 +216,6 @@ fun AlarmItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
                 .background(color = Color.Transparent),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically

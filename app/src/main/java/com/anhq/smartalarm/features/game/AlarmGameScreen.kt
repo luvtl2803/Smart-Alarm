@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,25 +29,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anhq.smartalarm.core.game.MathProblemGame
 import com.anhq.smartalarm.core.game.MemoryTilesGame
 import com.anhq.smartalarm.core.game.ShakePhoneGame
-import com.anhq.smartalarm.features.setting.data.SettingDataStore
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import com.anhq.smartalarm.core.model.GameDifficulty
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun AlarmGameScreen(
-    viewModel: AlarmGameViewModel,
+    viewModel: AlarmGameViewModel = hiltViewModel(),
     onGameComplete: () -> Unit,
     onSnoozeClick: () -> Unit
 ) {
     val game = viewModel.currentGame
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
 
     LaunchedEffect(game) {
         game?.onGameComplete = {
@@ -97,12 +102,8 @@ fun AlarmGameScreen(
 
             // Snooze button at bottom
             if (game != null && !game.isGameCompleted()) {
-                val settingDataStore = SettingDataStore(viewModel.getApplication())
-                val settings = runBlocking {
-                    settingDataStore.settingsFlow.first()
-                }
 
-                if (viewModel.snoozeCount < settings.maxSnoozeCount) {
+                if (viewModel.snoozeCount < uiState.maxSnoozeCount) {
                     Button(
                         onClick = onSnoozeClick,
                         modifier = Modifier
@@ -169,84 +170,102 @@ fun MathProblemGameContent(game: MathProblemGame) {
 
 @Composable
 fun MemoryTilesGameContent(game: MemoryTilesGame) {
-    var showPattern by remember { mutableStateOf(true) }
-    var userPattern by remember { mutableStateOf(listOf<Int>()) }
-    var showError by remember { mutableStateOf(false) }
-    var sequence by remember { mutableStateOf(emptyList<Int>()) }
+    var showingSequence by remember { mutableStateOf(false) }
+    var highlightedTiles by remember { mutableStateOf(emptyList<Int>()) }
+    var playerTiles by remember { mutableStateOf(emptyList<Int>()) }
+    var errorTile by remember { mutableStateOf<Int?>(null) }
+    var isInteractionEnabled by remember { mutableStateOf(true) }
+
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        game.onSequenceShow = { newSequence ->
-            sequence = newSequence
-        }
-        game.onSequenceComplete = {
-            showPattern = false
-        }
-        game.onWrongTile = { _ ->
-            showError = true
-            userPattern = emptyList()
-        }
-        game.onResetProgress = {
-            userPattern = emptyList()
-            showError = false
-        }
+        delay(500)
+        showingSequence = true
         game.showSequence()
+    }
+
+    LaunchedEffect(game) {
+        game.onSequenceShow = { sequence ->
+            highlightedTiles = sequence
+        }
+
+        game.onSequenceComplete = {
+            showingSequence = false
+            highlightedTiles = emptyList()
+        }
+
+        game.onWrongTile = { wrongTileIndex ->
+            isInteractionEnabled = false
+            errorTile = wrongTileIndex
+            scope.launch {
+                delay(1000)
+                errorTile = null
+                isInteractionEnabled = true
+            }
+        }
+
+        game.onResetProgress = {
+            playerTiles = emptyList()
+        }
     }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth()
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        if (showPattern) {
-            Text(
-                text = "Ghi nhớ mẫu hình!",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-        } else {
-            if (showError) {
-                Text(
-                    text = "Sai rồi, thử lại đi!",
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            } else {
-                Text(
-                    text = "Lặp lại mẫu hình",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-        }
+        Text(
+            text = if (showingSequence) "Xem mẫu hình" else "Lặp lại mẫu hình",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Text(
+            text = "${game.getCorrectTiles()}/${game.getTotalTiles()}",
+            style = MaterialTheme.typography.titleMedium
+        )
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            contentPadding = PaddingValues(16.dp),
+            columns = GridCells.Fixed(game.getGridSize()),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(9) { index ->
+            items(game.getGridSize() * game.getGridSize()) { index ->
                 Box(
                     modifier = Modifier
                         .aspectRatio(1f)
                         .background(
                             when {
-                                showPattern && sequence.contains(index) -> MaterialTheme.colorScheme.primary
-                                userPattern.contains(index) -> MaterialTheme.colorScheme.secondary
+                                errorTile == index -> MaterialTheme.colorScheme.error
+                                highlightedTiles.contains(index) -> MaterialTheme.colorScheme.primary
+                                playerTiles.contains(index) -> MaterialTheme.colorScheme.primaryContainer
                                 else -> MaterialTheme.colorScheme.surfaceVariant
                             }
                         )
-                        .clickable(enabled = !showPattern) {
-                            if (!showPattern) {
-                                game.selectTile(index)
-                            }
+                        .clickable(
+                            enabled = !showingSequence && isInteractionEnabled
+                        ) {
+                            playerTiles = playerTiles + index
+                            game.selectTile(index)
                         }
                 )
             }
         }
+
+        if (!showingSequence) {
+            Button(
+                onClick = {
+                    showingSequence = true
+                    game.reset()
+                    game.showSequence()
+                },
+                modifier = Modifier.padding(top = 16.dp)
+            ) {
+                Text("Phát lại")
+            }
+        }
     }
 }
+
 
 @Composable
 fun ShakePhoneGameContent(game: ShakePhoneGame) {
@@ -284,4 +303,15 @@ fun ShakePhoneGameContent(game: ShakePhoneGame) {
             trackColor = ProgressIndicatorDefaults.circularIndeterminateTrackColor,
         )
     }
-} 
+}
+
+@Preview
+@Composable
+private fun PreviewTilesGame() {
+    val game = MemoryTilesGame(
+        GameDifficulty.MEDIUM
+    )
+    MemoryTilesGameContent(
+        game = game
+    )
+}

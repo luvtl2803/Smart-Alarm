@@ -1,7 +1,11 @@
 package com.anhq.smartalarm.features.alarm
 
+import android.app.KeyguardManager
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.anhq.smartalarm.core.designsystem.theme.SmartAlarmTheme
+import com.anhq.smartalarm.core.designsystem.theme.label2
 import com.anhq.smartalarm.core.utils.AlarmPreviewManager
 import com.anhq.smartalarm.core.utils.AlarmReceiver
 import com.anhq.smartalarm.core.utils.SnoozeReceiver
@@ -44,12 +49,32 @@ class NoGameAlarmActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Set window flags before calling setContent
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                     WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
                     WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+            keyguardManager.requestDismissKeyguard(this, null)
+        }
+
+        // Acquire wake lock
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock = powerManager.newWakeLock(
+            PowerManager.FULL_WAKE_LOCK or
+                    PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                    PowerManager.ON_AFTER_RELEASE,
+            "SmartAlarm:AlarmWakeLock"
+        )
+        wakeLock.acquire(10 * 60 * 1000L) // 10 minutes
 
         val alarmId = intent.getIntExtra("alarm_id", -1)
         val isPreview = intent.getBooleanExtra("is_preview", false)
@@ -69,6 +94,7 @@ class NoGameAlarmActivity : ComponentActivity() {
                             }
                             sendBroadcast(stopIntent)
                         }
+                        wakeLock.release()
                         setResult(RESULT_OK)
                         finish()
                     },
@@ -84,6 +110,7 @@ class NoGameAlarmActivity : ComponentActivity() {
                             }
                             sendBroadcast(snoozeIntent)
                         }
+                        wakeLock.release()
                         setResult(RESULT_OK)
                         finish()
                     }
@@ -116,26 +143,30 @@ fun NoGameAlarmScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-            Row(
-            modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+            Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.SpaceEvenly
             ) {
                 Button(
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
                     onClick = onSnoozeClick,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary
                 )
                 ) {
-                Text("Tạm hoãn")
+                Text("Tạm hoãn", style = MaterialTheme.typography.label2)
                 }
 
+                Spacer(modifier = Modifier.height(10.dp))
+
                 Button(
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
                     onClick = onStopClick,
                     colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                Text("Dừng")
+                Text("Dừng", style = MaterialTheme.typography.label2)
             }
         }
     }

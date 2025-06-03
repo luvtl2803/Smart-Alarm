@@ -1,110 +1,208 @@
 package com.anhq.smartalarm.features.onboarding
 
+import android.Manifest
+import android.app.Activity
+import android.app.AlarmManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.anhq.smartalarm.R
+import com.anhq.smartalarm.features.home.navigation.navigateToHome
 
 data class OnboardingPage(
-    val image: Int,
-    val title: String,
-    val description: String
+    val title: Int,
+    val description: Int,
+    val lottieRes: Int
 )
 
 val onboardingPages = listOf(
     OnboardingPage(
-        image = R.drawable.ic_alarm,
-        title = "Smart Alarm",
-        description = "Set alarms with intelligent wake-up challenges to ensure you start your day right"
+        title = R.string.onboarding_title_1,
+        description = R.string.onboarding_desc_1,
+        lottieRes = R.raw.alarm_onboarding
     ),
     OnboardingPage(
-        image = R.drawable.ic_game,
-        title = "Wake-up Games",
-        description = "Choose from various mini-games like math problems, memory tiles, or phone shaking to stop your alarm"
+        title = R.string.onboarding_title_2,
+        description = R.string.onboarding_desc_2,
+        lottieRes = R.raw.game_onboarding
     ),
     OnboardingPage(
-        image = R.drawable.ic_repeat,
-        title = "Flexible Scheduling",
-        description = "Set repeating alarms for different days of the week with customizable labels and vibration"
+        title = R.string.onboarding_title_3,
+        description = R.string.onboarding_desc_3,
+        lottieRes = R.raw.stats_onboarding
     )
 )
 
-@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun OnboardingRoute(
+    navController: NavController
+) {
+    val viewModel: OnboardingViewModel = hiltViewModel()
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.setFirstRun(false)
+            navController.navigateToHome()
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                activity != null &&
+                !ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            ) {
+                Toast.makeText(context, "Vui lòng cấp quyền trong cài đặt", Toast.LENGTH_SHORT)
+                    .show()
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", context.packageName, null)
+                }
+                context.startActivity(intent)
+            } else {
+                Toast.makeText(context, "Vui lòng cấp quyền cho ứng dụng!", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        if (!alarmManager.canScheduleExactAlarms()) {
+            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+            context.startActivity(intent)
+        }
+    }
+
+    fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.setFirstRun(false)
+            navController.navigateToHome()
+        }
+    }
+    OnboardingScreen(
+        onOnboardingComplete = {
+            requestNotificationPermission()
+        }
+    )
+}
+
 @Composable
 fun OnboardingScreen(
     onOnboardingComplete: () -> Unit
 ) {
     val pagerState = rememberPagerState(pageCount = { onboardingPages.size })
-    val isLastPage = pagerState.currentPage == onboardingPages.size - 1
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            OnboardingPage(onboardingPages[page])
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
         ) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) { page ->
-                OnboardingPage(onboardingPages[page])
-            }
-
-            // Indicators
-            Row(
-                modifier = Modifier
-                    .height(50.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                repeat(onboardingPages.size) { iteration ->
-                    val color = if (pagerState.currentPage == iteration) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
-                    Box(
-                        modifier = Modifier
-                            .padding(2.dp)
-                            .size(10.dp)
-                            .background(
-                                color = color,
-                                shape = MaterialTheme.shapes.small
-                            )
-                    )
-                }
-            }
-
-            // Button
-            AnimatedVisibility(
-                visible = isLastPage,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Button(
-                    onClick = onOnboardingComplete,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 32.dp)
+                // Page indicators
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(bottom = 32.dp)
                 ) {
-                    Text(text = "Get Started")
+                    repeat(pagerState.pageCount) { iteration ->
+                        val color = if (pagerState.currentPage == iteration) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(color)
+                                .size(10.dp)
+                        )
+                    }
+                }
+
+                // Get Started button
+                AnimatedVisibility(
+                    visible = pagerState.currentPage == pagerState.pageCount - 1,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Button(
+                        onClick = onOnboardingComplete,
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier
+                            .padding(horizontal = 32.dp)
+                            .fillMaxWidth()
+                            .height(56.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.get_started),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
             }
         }
@@ -112,36 +210,50 @@ fun OnboardingScreen(
 }
 
 @Composable
-fun OnboardingPage(page: OnboardingPage) {
+fun OnboardingPage(
+    page: OnboardingPage
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Image(
-            painter = painterResource(id = page.image),
-            contentDescription = page.title,
-            modifier = Modifier.size(200.dp)
+        val composition by rememberLottieComposition(
+            LottieCompositionSpec.RawRes(page.lottieRes)
+        )
+
+        LottieAnimation(
+            composition = composition,
+            iterations = LottieConstants.IterateForever,
+            modifier = Modifier.size(280.dp)
         )
         
         Spacer(modifier = Modifier.height(32.dp))
         
         Text(
-            text = page.title,
+            text = stringResource(page.title),
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
         )
         
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = page.description,
+            text = stringResource(page.description),
             style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
         )
     }
-} 
+}
+
+@Preview
+@Composable
+private fun PreviewOnboardingScreen() {
+    OnboardingScreen {
+
+    }
+}

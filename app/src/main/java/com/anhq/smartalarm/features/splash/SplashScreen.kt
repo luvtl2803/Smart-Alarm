@@ -1,38 +1,63 @@
 package com.anhq.smartalarm.features.splash
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Image
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.anhq.smartalarm.R
+import com.anhq.smartalarm.features.home.navigation.navigateToHome
+import com.anhq.smartalarm.features.onboarding.navigation.navigateToOnboarding
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(
-    onSplashComplete: () -> Unit
+fun SplashRoute(
+    navController: NavController,
+    viewModel: SplashViewModel = hiltViewModel()
 ) {
-    var startAnimation by remember { mutableStateOf(false) }
-    val alphaAnim = animateFloatAsState(
-        targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = 1000
-        ),
-        label = "Splash Alpha Animation"
+    SplashScreen(
+        onSplashFinished = {
+            if (viewModel.isFirstRun()) {
+                navController.navigateToOnboarding()
+            } else {
+                navController.navigateToHome()
+            }
+        }
+    )
+}
+
+@Composable
+fun SplashScreen(
+    onSplashFinished: () -> Unit
+) {
+    val scale = remember { Animatable(0.3f) }
+    val composition by rememberLottieComposition(
+        spec = LottieCompositionSpec.RawRes(R.raw.alarm_clock_lottie)
     )
 
     LaunchedEffect(key1 = true) {
-        startAnimation = true
+        scale.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(800)
+        )
         delay(2000)
-        onSplashComplete()
+        onSplashFinished()
     }
 
     Box(
@@ -41,25 +66,12 @@ fun SplashScreen(
             .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.alpha(alphaAnim.value)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_alarm),
-                contentDescription = "App Logo",
-                modifier = Modifier.size(120.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = "Smart Alarm",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+        LottieAnimation(
+            modifier = Modifier
+                .size(200.dp)
+                .scale(scale.value),
+            composition = composition,
+            iterations = LottieConstants.IterateForever,
+        )
     }
-} 
+}

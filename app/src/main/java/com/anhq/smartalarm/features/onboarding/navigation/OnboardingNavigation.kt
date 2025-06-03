@@ -4,18 +4,25 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
+import com.anhq.smartalarm.features.onboarding.OnboardingRoute
 import com.anhq.smartalarm.features.onboarding.OnboardingScreen
+import com.anhq.smartalarm.features.splash.SplashRoute
+import com.anhq.smartalarm.features.splash.navigation.SplashRoute
+import kotlinx.serialization.Serializable
 
-const val OnboardingRoute = "onboarding_route"
+@Serializable
+data object OnboardingRoute
 
-fun NavController.navigateToOnboarding(navOptions: NavOptions? = null) {
-    this.navigate(OnboardingRoute, navOptions)
-}
+fun NavController.navigateToOnboarding(navOptions: NavOptions? = null) = navigate(
+    route = OnboardingRoute, navOptions = navOptions
+)
 
 fun NavGraphBuilder.onboardingScreen(
-    onOnboardingComplete: () -> Unit
+    navController: NavController
 ) {
-    composable(route = OnboardingRoute) {
-        OnboardingScreen(onOnboardingComplete = onOnboardingComplete)
+    composable<OnboardingRoute> {
+        OnboardingRoute(
+            navController = navController
+        )
     }
-} 
+}

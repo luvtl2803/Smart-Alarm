@@ -9,7 +9,7 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
-import com.anhq.smartalarm.features.setting.data.SettingDataStore
+import com.anhq.smartalarm.core.sharereference.PreferenceHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -22,7 +22,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class SnoozeReceiver : BroadcastReceiver() {
     @Inject
-    lateinit var settingDataStore: SettingDataStore
+    lateinit var preferenceHelper: PreferenceHelper
 
     companion object {
         private const val TAG = "SnoozeReceiver"
@@ -33,9 +33,12 @@ class SnoozeReceiver : BroadcastReceiver() {
         val alarmId = intent.getIntExtra("alarm_id", -1)
         if (alarmId == -1) return
 
+        // Stop current alarm sound and vibration
+        AlarmReceiver.stopAlarm()
+
         // Get snooze settings from SettingDataStore
         val settings = runBlocking {
-            settingDataStore.settingsFlow.first()
+            preferenceHelper.settingsFlow.first()
         }
         
         val snoozeDuration = settings.snoozeDurationMinutes
@@ -45,6 +48,9 @@ class SnoozeReceiver : BroadcastReceiver() {
         val currentSnoozeCount = intent.getIntExtra("snooze_count", 0)
         if (currentSnoozeCount >= maxSnoozeCount) {
             Log.d(TAG, "Maximum snooze count reached for alarm $alarmId")
+            // Cancel notification even if max snooze reached
+            val notificationManager = NotificationManagerCompat.from(context)
+            notificationManager.cancel(alarmId)
             return
         }
 
@@ -57,6 +63,7 @@ class SnoozeReceiver : BroadcastReceiver() {
         val snoozeIntent = Intent(context, AlarmReceiver::class.java).apply {
             putExtra("alarm_id", alarmId)
             putExtra("snooze_count", currentSnoozeCount + 1)
+            putExtra("is_repeating", intent.getBooleanExtra("is_repeating", false))
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

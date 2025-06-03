@@ -1,5 +1,7 @@
 package com.anhq.smartalarm.features.editalarm.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
@@ -23,7 +25,20 @@ fun NavGraphBuilder.editAlarmScreen(
     onCancelClick: () -> Unit,
     onUpdateClick: () -> Unit
 ) {
-    composable<EditAlarmRoute> {
+    composable<EditAlarmRoute> (
+        enterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(700)
+            )
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(700)
+            )
+        }
+    ) {
         EditAlarmRoute(
             onCancelClick = onCancelClick,
             onSaveClick = onUpdateClick

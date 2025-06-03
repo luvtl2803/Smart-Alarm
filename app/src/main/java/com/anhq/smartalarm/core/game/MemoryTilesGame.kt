@@ -1,22 +1,46 @@
 package com.anhq.smartalarm.core.game
 
 import com.anhq.smartalarm.core.model.AlarmGameType
-import kotlin.random.Random
+import com.anhq.smartalarm.core.model.GameDifficulty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
-class MemoryTilesGame : AlarmGame() {
+class MemoryTilesGame(difficulty: GameDifficulty) : AlarmGame() {
     override val type = AlarmGameType.MEMORY_TILES
     override val title = "Memory Tiles"
     override val description = "Remember and repeat the pattern"
-
     private val gridSize = 3 // 3x3 grid
-    private val sequenceLength = 3 // Reduced from 4 to 3 for easier gameplay
+    
+    private val sequenceLength = when (difficulty) {
+        GameDifficulty.EASY -> 3    // 3 ô để ghi nhớ
+        GameDifficulty.MEDIUM -> 4  // 4 ô để ghi nhớ
+        GameDifficulty.HARD -> 5    // 5 ô để ghi nhớ
+    }
+    
+    private val showDuration = when (difficulty) {
+        GameDifficulty.EASY -> 1000L    // 1 giây
+        GameDifficulty.MEDIUM -> 800L   // 0.8 giây
+        GameDifficulty.HARD -> 500L     // 0.5 giây
+    }
+    
+    private val pauseDuration = when (difficulty) {
+        GameDifficulty.EASY -> 500L     // 0.5 giây
+        GameDifficulty.MEDIUM -> 400L   // 0.4 giây
+        GameDifficulty.HARD -> 300L     // 0.3 giây
+    }
+    
+    private val finalShowDuration = when (difficulty) {
+        GameDifficulty.EASY -> 2000L    // 2 giây
+        GameDifficulty.MEDIUM -> 1500L  // 1.5 giây
+        GameDifficulty.HARD -> 1000L    // 1 giây
+    }
+
     private var sequence = mutableListOf<Int>() // Chuỗi cần ghi nhớ
     private var playerSequence = mutableListOf<Int>() // Chuỗi người chơi đã chọn
-    
+
     var onSequenceShow: ((List<Int>) -> Unit)? = null // Callback để hiển thị chuỗi
     var onSequenceComplete: (() -> Unit)? = null // Callback khi hoàn thành hiển thị chuỗi
     var onWrongTile: ((Int) -> Unit)? = null // Callback khi chọn sai, truyền vào index của ô sai
@@ -36,17 +60,17 @@ class MemoryTilesGame : AlarmGame() {
             for (tile in sequence) {
                 // Hiển thị ô hiện tại
                 onSequenceShow?.invoke(listOf(tile))
-                delay(800) // Hiển thị trong 800ms
-                
+                delay(showDuration)
+
                 // Ẩn ô đi
                 onSequenceShow?.invoke(emptyList())
-                delay(400) // Đợi 400ms trước khi hiển thị ô tiếp theo
+                delay(pauseDuration)
             }
 
             // Hiển thị toàn bộ chuỗi một lần cuối
             onSequenceShow?.invoke(sequence)
-            delay(1500) // Hiển thị toàn bộ chuỗi trong 1.5 giây
-            
+            delay(finalShowDuration)
+
             // Kết thúc hiển thị
             onSequenceShow?.invoke(emptyList())
             onSequenceComplete?.invoke()
@@ -57,7 +81,7 @@ class MemoryTilesGame : AlarmGame() {
         if (isCompleted) return
 
         playerSequence.add(tileIndex)
-        
+
         // Kiểm tra xem người chơi đã chọn đúng không
         val currentIndex = playerSequence.size - 1
         if (playerSequence[currentIndex] != sequence[currentIndex]) {
@@ -75,6 +99,12 @@ class MemoryTilesGame : AlarmGame() {
     }
 
     override fun reset() {
+        isCompleted = false
+        playerSequence.clear()
+        // Do NOT generate new sequence here to keep the same pattern on reset
+    }
+
+    fun startNewGame() {
         isCompleted = false
         playerSequence.clear()
         generateNewSequence()
@@ -95,4 +125,4 @@ class MemoryTilesGame : AlarmGame() {
 
     // Lấy tổng số ô cần chọn
     fun getTotalTiles() = sequence.size
-} 
+}

@@ -1,4 +1,4 @@
-package com.anhq.smartalarm.features.onboarding
+package com.anhq.smartalarm.features.splash
 
 import androidx.lifecycle.ViewModel
 import com.anhq.smartalarm.core.sharereference.PreferenceHelper
@@ -6,10 +6,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
-class OnboardingViewModel @Inject constructor(
+class SplashViewModel @Inject constructor(
     private val preferenceHelper: PreferenceHelper
 ) : ViewModel() {
-    fun setFirstRun(isFirstRun: Boolean) {
-        preferenceHelper.isFirstRun = isFirstRun
+
+    fun isFirstRun(): Boolean {
+        return preferenceHelper.isFirstRun
     }
 }

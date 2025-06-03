@@ -2,20 +2,17 @@ package com.anhq.smartalarm.features.splash.navigation
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
-import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
-import com.anhq.smartalarm.features.splash.SplashScreen
+import com.anhq.smartalarm.features.splash.SplashRoute
+import kotlinx.serialization.Serializable
 
-const val SplashRoute = "splash_route"
-
-fun NavController.navigateToSplash(navOptions: NavOptions? = null) {
-    this.navigate(SplashRoute, navOptions)
-}
+@Serializable
+data object SplashRoute
 
 fun NavGraphBuilder.splashScreen(
-    onSplashComplete: () -> Unit
+    navController: NavController
 ) {
-    composable(route = SplashRoute) {
-        SplashScreen(onSplashComplete = onSplashComplete)
+    composable<SplashRoute> {
+        SplashRoute(navController)
     }
-} 
+}

@@ -1,14 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Smart Alarm</string>
-    <string name="home">Trang chủ</string>
-    <string name="streak">Chuỗi</string>
-    <string name="alarm">Báo thức</string>
-    <string name="user">Cá nhân</string>
-    <string name="cancel">Quay lại</string>
-    <string name="set_alarm">Đặt báo thức</string>
-    <string name="save">Hoàn tất</string>
-    <string name="repeat">Lặp lại</string>
-    <string name="vibrate">Rung</string>
+    
+    <!-- Common -->
+    <string name="save">Lưu</string>
+    <string name="cancel">Hủy</string>
+    <string name="delete">Xóa</string>
+    <string name="edit">Sửa</string>
+    <string name="add">Thêm</string>
+    
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_alarm">Báo thức</string>
+    <string name="nav_statistics">Thống kê</string>
+    <string name="nav_settings">Cài đặt</string>
+
+    <!-- Alarm Screen -->
+    <string name="no_alarms">Chưa có báo thức nào</string>
+    <string name="alarm_inactive">Đang tắt</string>
+    <string name="alarm_active">Đang bật</string>
+    <string name="delete_selected">Xóa đã chọn</string>
+    <string name="exit_selection">Thoát chọn</string>
+
+    <!-- Add/Edit Alarm -->
+    <string name="alarm_name">Tên báo thức</string>
+    <string name="repeat_days">Lặp lại</string>
+    <string name="vibration">Rung</string>
     <string name="sound">Âm thanh</string>
-    <string name="preview_alarm">Xem trước báo thức"</string>
+    <string name="game_type">Kiểu trò chơi</string>
+    <string name="preview">Xem trước</string>
+    <string name="stop_preview">Dừng xem trước</string>
+
+    <!-- Days of Week -->
+    <string name="monday">Thứ 2</string>
+    <string name="tuesday">Thứ 3</string>
+    <string name="wednesday">Thứ 4</string>
+    <string name="thursday">Thứ 5</string>
+    <string name="friday">Thứ 6</string>
+    <string name="saturday">Thứ 7</string>
+    <string name="sunday">Chủ nhật</string>
+
+    <!-- Game Types -->
+    <string name="game_none">Không có</string>
+    <string name="game_math">Toán học</string>
+    <string name="game_memory">Ghi nhớ</string>
+    <string name="game_shake">Lắc điện thoại</string>
+
+    <!-- Settings -->
+    <string name="settings_theme">Chủ đề giao diện</string>
+    <string name="theme_light">Sáng</string>
+    <string name="theme_dark">Tối</string>
+    <string name="theme_system">Theo hệ thống</string>
+    <string name="settings_game_difficulty">Độ khó mặc định của game</string>
+    <string name="difficulty_easy">Dễ</string>
+    <string name="difficulty_medium">Trung bình</string>
+    <string name="difficulty_hard">Khó</string>
+    <string name="settings_snooze">Cài đặt tạm hoãn</string>
+    <string name="snooze_duration">Thời gian tạm hoãn</string>
+    <string name="snooze_count">Số lần tạm hoãn tối đa</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title_1">Báo thức thông minh</string>
+    <string name="onboarding_desc_1">Tạo thói quen thức dậy đúng giờ với Smart Alarm</string>
+    <string name="onboarding_title_2">Trò chơi thú vị</string>
+    <string name="onboarding_desc_2">Đánh thức não bộ với các trò chơi nhỏ buổi sáng</string>
+    <string name="onboarding_title_3">Theo dõi giấc ngủ</string>
+    <string name="onboarding_desc_3">Xem thống kê và cải thiện thói quen thức dậy</string>
+    <string name="get_started">Bắt đầu</string>
+
+    <!-- Home Screen -->
+    <string name="home_quote">Đừng dừng lại khi mệt mỏi, hãy dừng lại khi hoàn thành</string>
+    <string name="next_alarm">Báo thức tiếp theo</string>
 </resources>

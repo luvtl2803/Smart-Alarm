@@ -6,10 +6,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TimePickerState
+import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
@@ -79,7 +81,7 @@ class EditAlarmViewModel @Inject constructor(
 
     init {
         loadAlarm()
-        loadAlarmSounds()
+        loadSystemAlarmSounds()
         checkAlarmPermission()
     }
 
@@ -92,28 +94,31 @@ class EditAlarmViewModel @Inject constructor(
                 _label.value = it.label
                 _isVibrate.value = it.isVibrate
                 _gameType.value = it.gameType
+                _selectedSound.value = AlarmSound(it.soundUri.toUri(), getTitleFromUri(it.soundUri.toUri()))
                 _timePickerState.value = TimePickerState(
                     initialHour = it.hour,
                     initialMinute = it.minute,
                     is24Hour = true
                 )
-                // Set selected sound based on URI
-                it.soundUri.let { uri ->
-                    _selectedSound.value = alarmSounds.value.find { sound ->
-                        sound.uri.toString() == uri
-                    }
-                }
             }
         }
     }
 
-    private fun loadAlarmSounds() {
-        _alarmSounds.value = alarmSoundManager.getAllAlarmSounds()
+    private fun loadSystemAlarmSounds() {
+        val noSound = AlarmSound(
+            uri = "".toUri(),
+            title = "Im lặng"
+        )
+
         val defaultAlarmSound = AlarmSound(
             uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-            title = "Default"
+            title = getTitleFromUri(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
         )
-        _selectedSound.value = defaultAlarmSound
+        _alarmSounds.value = listOf(noSound) + listOf(defaultAlarmSound) + alarmSoundManager.getAllAlarmSounds()
+    }
+
+    private fun getTitleFromUri(uri: Uri): String{
+        return alarmSoundManager.getAlarmTitleFromUri(uri)
     }
 
     fun setTimePickerState(state: TimePickerState) {
@@ -140,18 +145,16 @@ class EditAlarmViewModel @Inject constructor(
         _gameType.value = type
     }
 
-    fun setAlarmSound(sound: AlarmSound) {
-        _selectedSound.value = sound
+    fun setAlarmSound(uri: Uri) {
+        _selectedSound.value = AlarmSound(uri, getTitleFromUri(uri))
     }
 
     fun previewAlarm(): Intent {
-        // Start preview with current settings
         alarmPreviewManager.startPreview(
             soundUri = selectedSound.value?.uri,
             isVibrate = isVibrate.value
         )
 
-        // Return appropriate intent based on game type
         return if (gameType.value == AlarmGameType.NONE) {
             Intent(context, NoGameAlarmActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
