@@ -1,4 +1,4 @@
-package com.anhq.smartalarm.core.database.di
+package com.anhq.smartalarm.core.data.di
 
 import com.anhq.smartalarm.core.database.converter.AlarmGameTypeConverter
 import com.anhq.smartalarm.core.database.converter.DayOfWeekSetConverter

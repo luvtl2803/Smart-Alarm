@@ -33,7 +33,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -61,6 +60,7 @@ import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anhq.smartalarm.R
+import com.anhq.smartalarm.core.designsystem.component.GameTypeSelector
 import com.anhq.smartalarm.core.designsystem.theme.Pure01
 import com.anhq.smartalarm.core.designsystem.theme.Pure02
 import com.anhq.smartalarm.core.designsystem.theme.SmartAlarmTheme
@@ -277,48 +277,12 @@ fun EditAlarmScreen(
                         }
                     }
 
-                    // Wake Up Challenge Section
+                    // Game Type Section
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.game_type),
-                                    style = MaterialTheme.typography.label2,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                                AlarmGameType.entries.forEach { type ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { setGameType(type) },
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = when (type) {
-                                                AlarmGameType.NONE -> "Không có thử thách"
-                                                AlarmGameType.MATH_PROBLEM -> "Giải toán"
-                                                AlarmGameType.MEMORY_TILES -> "Ghi nhớ ô"
-                                                AlarmGameType.SHAKE_PHONE -> "Lắc điện thoại"
-                                            }, style = MaterialTheme.typography.body5
-                                        )
-                                        RadioButton(
-                                            selected = gameType == type,
-                                            onClick = { setGameType(type) }
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        GameTypeSelector(
+                            selectedGameType = gameType,
+                            onGameTypeSelected = setGameType
+                        )
                     }
 
                     // Sound Settings Section

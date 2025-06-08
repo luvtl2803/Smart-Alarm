@@ -83,7 +83,7 @@ fun NanaBottomBar(
 @Composable
 private fun AlarmBottomBarPreview() {
     NanaBottomBar(
-        currentDestination = TopLevelDestination.HOME,
+        currentDestination = TopLevelDestination.ALARM,
         destinations = TopLevelDestination.entries,
         onNavigateToDestination = {}
     )

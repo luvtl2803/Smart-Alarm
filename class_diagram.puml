@@ -1,0 +1,198 @@
+@startuml SmartAlarm
+
+' Enums
+enum AlarmGameType {
+    MATH_PROBLEM
+    MEMORY_TILES
+    SHAKE_PHONE
+    MEMORY_CARD
+    WORD_PUZZLE
+    NONE
+}
+
+enum DayOfWeek {
+    MON
+    TUE
+    WED
+    THU
+    FRI
+    SAT
+    SUN
+    +label: String
+}
+
+enum GameDifficulty {
+    EASY
+    MEDIUM
+    HARD
+}
+
+' Core Models
+class Alarm {
+    +id: Int
+    +hour: Int
+    +minute: Int
+    +isActive: Boolean
+    +isVibrate: Boolean
+    +selectedDays: Set<DayOfWeek>
+    +label: String
+    +gameType: AlarmGameType
+    +soundUri: String
+    +getRepeatDaysString(): String
+}
+
+class Timer {
+    +id: Int
+    +initialTimeMillis: Long
+    +currentInitialTimeMillis: Long
+    +remainingTimeMillis: Long
+    +isRunning: Boolean
+    +isPaused: Boolean
+    +soundUri: String
+    +isVibrate: Boolean
+    +createdAt: Long
+    +endedAt: Long?
+    +lastTickTime: Long
+}
+
+' Database Entities
+class AlarmEntity {
+    +id: Int
+    +hour: Int
+    +minute: Int
+    +isActive: Boolean
+    +isVibrate: Boolean
+    +selectedDays: Set<DayOfWeek>
+    +label: String
+    +gameType: AlarmGameType
+    +soundUri: String
+}
+
+class TimerEntity {
+    +id: Int
+    +initialTimeMillis: Long
+    +currentInitialTimeMillis: Long
+    +remainingTimeMillis: Long
+    +lastTickTime: Long
+    +isRunning: Boolean
+    +isPaused: Boolean
+    +soundUri: String
+    +isVibrate: Boolean
+    +endedAt: Long?
+}
+
+' Games
+abstract class AlarmGame {
+    #isCompleted: Boolean
+    +type: AlarmGameType
+    +title: String
+    +description: String
+    +onGameComplete: () -> Unit
+    +isGameCompleted(): Boolean
+    +{abstract} reset()
+    #completeGame()
+}
+
+class MathProblemGame {
+    -difficulty: GameDifficulty
+    -firstNumber: Int
+    -secondNumber: Int
+    -operation: MathOperation
+    -correctAnswer: Int
+    +getProblem(): String
+    +checkAnswer(answer: Int): Boolean
+    -generateNewProblem()
+    -generateNumberForAddition(): Int
+    -generateNumberForSubtraction(): Int
+    -generateNumberForMultiplication(): Int
+}
+
+class MemoryTilesGame {
+    -difficulty: GameDifficulty
+    -gridSize: Int
+    -sequenceLength: Int
+    -showDuration: Long
+    -pauseDuration: Long
+    -finalShowDuration: Long
+    -sequence: List<Int>
+    -playerSequence: List<Int>
+    +onSequenceShow: (List<Int>) -> Unit
+    +onSequenceComplete: () -> Unit
+    +onWrongTile: (Int) -> Unit
+    +startNewGame()
+    +getGridSize(): Int
+    +getCorrectTiles(): Int
+    +getTotalTiles(): Int
+}
+
+class ShakePhoneGame {
+    -context: Context
+    -difficulty: GameDifficulty
+    -sensorManager: SensorManager
+    -accelerometer: Sensor
+    -shakeThreshold: Float
+    -requiredShakes: Int
+    -minShakeInterval: Long
+    -shakeCount: Int
+    +onShake: (Int, Int) -> Unit
+    +startListening()
+    +stopListening()
+}
+
+class MemoryCardGame {
+    -difficulty: GameDifficulty
+    -gridSize: Int
+    -cards: List<Card>
+    -flippedCards: List<Card>
+    -matchedPairs: Int
+    -totalPairs: Int
+    -showDuration: Long
+    +onCardFlip: (Int) -> Unit
+    +onPairMatched: () -> Unit
+    +onPairMismatched: () -> Unit
+    +flipCard(position: Int): Boolean
+    +startNewGame()
+    -generateCards()
+    -shuffleCards()
+    -checkMatch(): Boolean
+}
+
+class WordPuzzleGame {
+    -difficulty: GameDifficulty
+    -currentWord: String
+    -scrambledWord: String
+    -wordList: List<String>
+    -attemptsLeft: Int
+    -maxAttempts: Int
+    +getCurrentScrambledWord(): String
+    +checkAnswer(answer: String): Boolean
+    +getAttemptsLeft(): Int
+    +getHint(): String
+    -generateNewWord()
+    -scrambleWord(word: String): String
+    -loadWordList()
+}
+
+' Factory
+class AlarmGameFactory {
+    {static} +createGame(type: AlarmGameType, context: Context, difficulty: GameDifficulty): AlarmGame
+}
+
+' Relationships
+AlarmGame <|-- MathProblemGame
+AlarmGame <|-- MemoryTilesGame
+AlarmGame <|-- ShakePhoneGame
+AlarmGame <|-- MemoryCardGame
+AlarmGame <|-- WordPuzzleGame
+
+Alarm --> "1" AlarmGameType
+Alarm --> "*" DayOfWeek
+
+AlarmEntity --> "1" AlarmGameType
+AlarmEntity --> "*" DayOfWeek
+
+AlarmGameFactory ..> AlarmGame
+AlarmGameFactory ..> AlarmGameType
+AlarmGameFactory ..> GameDifficulty
+
+@enduml 

@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.sp
 val Typography.headline1: TextStyle
     get() = TextStyle(
         fontFamily = OxygenBold,
-        fontSize = 32.sp,
+        fontSize = 28.sp,
         lineHeight = 48.sp,
         letterSpacing = 0.sp
     )
@@ -17,7 +17,7 @@ val Typography.headline1: TextStyle
 val Typography.headline2: TextStyle
     get() = TextStyle(
         fontFamily = OxygenBold,
-        fontSize = 28.sp,
+        fontSize = 24.sp,
         lineHeight = 42.sp,
         letterSpacing = 0.sp
     )
@@ -25,8 +25,8 @@ val Typography.headline2: TextStyle
 val Typography.headline3: TextStyle
     get() = TextStyle(
         fontFamily = OxygenBold,
-        fontSize = 24.sp,
-        lineHeight = 36.sp,
+        fontSize = 20.sp,
+        lineHeight = 28.sp,
         letterSpacing = 0.sp
     )
 

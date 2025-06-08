@@ -1,79 +1,268 @@
 package com.anhq.smartalarm.features.statistics
 
-import android.graphics.Color
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.anhq.smartalarm.R
-import com.anhq.smartalarm.core.ui.BottomNavScreen
-import com.github.mikephil.charting.charts.BarChart
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.charts.PieChart
-import com.github.mikephil.charting.components.Legend
-import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.*
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
-import com.github.mikephil.charting.formatter.PercentFormatter
-import java.util.*
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.anhq.smartalarm.core.data.repository.SleepData
+import com.anhq.smartalarm.core.designsystem.theme.headline3
+import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
+import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
+import com.patrykandpatrick.vico.compose.chart.Chart
+import com.patrykandpatrick.vico.compose.chart.line.lineChart
+import com.patrykandpatrick.vico.core.entry.FloatEntry
+import com.patrykandpatrick.vico.core.entry.entryModelOf
 
 @Composable
-fun StatisticsRoute() {
-    StatisticsScreen()
+fun StatisticsRoute(
+    viewModel: StatisticsViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    StatisticsScreen(
+        uiState = uiState,
+        onRequestPermission = {
+            context.startActivity(viewModel.getPermissionIntent())
+        },
+        formatDuration = viewModel::formatDuration,
+        formatDate = viewModel::formatDate,
+        formatTime = viewModel::formatTime
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatisticsScreen() {
-    BottomNavScreen(
+fun StatisticsScreen(
+    uiState: StatisticsUiState,
+    onRequestPermission: () -> Unit,
+    formatDuration: (Long) -> String,
+    formatDate: (SleepData) -> String,
+    formatTime: (SleepData) -> String
+) {
+    Scaffold(
+        modifier = Modifier.padding(
+            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        ),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.nav_statistics)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+            Text(
+                text = "Thống kê giấc ngủ",
+                style = MaterialTheme.typography.headline3,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                textAlign = TextAlign.Center
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
         ) {
-            // Thời gian ngủ trung bình theo tuần
-            StatCard(
-                title = "Thời gian ngủ trung bình",
-                content = { SleepTimeLineChart() }
-            )
+            when {
+                uiState.isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                !uiState.hasPermission -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Cần quyền truy cập dữ liệu giấc ngủ",
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ElevatedButton(onClick = onRequestPermission) {
+                            Text("Cấp quyền")
+                        }
+                    }
+                }
 
-            // Phân bố thời gian thức dậy
-            StatCard(
-                title = "Phân bố thời gian thức dậy",
-                content = { WakeUpDistributionPieChart() }
-            )
+                uiState.sleepData.isEmpty() -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Không có dữ liệu giấc ngủ",
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Hãy kết nối với ứng dụng theo dõi giấc ngủ",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Thống kê tổng quan
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Text(
+                                        text = "Tổng quan",
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
 
-            // Số lần báo thức trong tuần
-            StatCard(
-                title = "Số lần báo thức trong tuần",
-                content = { AlarmFrequencyBarChart() }
-            )
+                                    val avgDuration = uiState.sleepData
+                                        .map { it.durationMinutes }
+                                        .average()
+                                        .toLong()
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = formatDuration(avgDuration),
+                                                style = MaterialTheme.typography.titleLarge,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Text(
+                                                text = "Trung bình",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = "${uiState.sleepData.size} ngày",
+                                                style = MaterialTheme.typography.titleLarge,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Text(
+                                                text = "Đã ghi nhận",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Biểu đồ thời gian ngủ
+                        item {
+                            StatCard(
+                                title = "Thời gian ngủ 7 ngày gần đây",
+                                content = {
+                                    val entries = uiState.sleepData
+                                        .takeLast(7)
+                                        .mapIndexed { index, data ->
+                                            FloatEntry(
+                                                x = index.toFloat(),
+                                                y = data.durationMinutes.toFloat() / 60 // Chuyển đổi phút sang giờ
+                                            )
+                                        }
+
+                                    Chart(
+                                        chart = lineChart(),
+                                        model = entryModelOf(entries),
+                                        startAxis = rememberStartAxis(),
+                                        bottomAxis = rememberBottomAxis(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(200.dp)
+                                    )
+                                }
+                            )
+                        }
+
+                        // Chi tiết từng ngày
+                        items(uiState.sleepData.reversed()) { data ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = formatDate(data),
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text(
+                                            text = formatDuration(data.durationMinutes),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = formatTime(data),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -114,173 +303,4 @@ fun StatCard(
             }
         }
     }
-}
-
-@Composable
-fun SleepTimeLineChart() {
-    val context = LocalContext.current
-    val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
-    val surfaceColor = MaterialTheme.colorScheme.surface.toArgb()
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface.toArgb()
-
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            LineChart(context).apply {
-                description.isEnabled = false
-                setTouchEnabled(true)
-                isDragEnabled = true
-                setScaleEnabled(false)
-                setPinchZoom(false)
-                setDrawGridBackground(false)
-                
-                xAxis.apply {
-                    position = XAxis.XAxisPosition.BOTTOM
-                    setDrawGridLines(false)
-                    textColor = onSurfaceColor
-                    valueFormatter = IndexAxisValueFormatter(arrayOf("T2", "T3", "T4", "T5", "T6", "T7", "CN"))
-                }
-                
-                axisLeft.apply {
-                    setDrawGridLines(true)
-                    textColor = onSurfaceColor
-                }
-                
-                axisRight.isEnabled = false
-                legend.textColor = onSurfaceColor
-                
-                setBackgroundColor(surfaceColor)
-            }
-        },
-        update = { chart ->
-            val entries = listOf(
-                Entry(0f, 7.5f),
-                Entry(1f, 6.8f),
-                Entry(2f, 7.2f),
-                Entry(3f, 6.5f),
-                Entry(4f, 7.8f),
-                Entry(5f, 8.2f),
-                Entry(6f, 8.5f)
-            )
-
-            val dataSet = LineDataSet(entries, "Giờ ngủ").apply {
-                color = primaryColor
-                lineWidth = 2f
-                setDrawCircles(true)
-                setCircleColor(primaryColor)
-                circleRadius = 4f
-                setDrawValues(false)
-                mode = LineDataSet.Mode.CUBIC_BEZIER
-            }
-
-            chart.data = LineData(dataSet)
-            chart.invalidate()
-        }
-    )
-}
-
-@Composable
-fun WakeUpDistributionPieChart() {
-    val context = LocalContext.current
-    var colors = listOf(
-        MaterialTheme.colorScheme.primary.toArgb(),
-        MaterialTheme.colorScheme.secondary.toArgb(),
-        MaterialTheme.colorScheme.tertiary.toArgb()
-    )
-    val surfaceColor = MaterialTheme.colorScheme.surface.toArgb()
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface.toArgb()
-
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            PieChart(context).apply {
-                description.isEnabled = false
-                setUsePercentValues(true)
-                setDrawEntryLabels(false)
-                
-                legend.apply {
-                    textColor = onSurfaceColor
-                    verticalAlignment = Legend.LegendVerticalAlignment.CENTER
-                    horizontalAlignment = Legend.LegendHorizontalAlignment.RIGHT
-                    orientation = Legend.LegendOrientation.VERTICAL
-                    setDrawInside(false)
-                }
-                
-                setBackgroundColor(surfaceColor)
-            }
-        },
-        update = { chart ->
-            val entries = listOf(
-                PieEntry(60f, "Đúng giờ"),
-                PieEntry(30f, "Trễ < 10p"),
-                PieEntry(10f, "Trễ > 10p")
-            )
-
-            val dataSet = PieDataSet(entries, "").apply {
-                valueTextSize = 12f
-                valueTextColor = Color.WHITE
-                valueFormatter = PercentFormatter(chart)
-            }
-
-            chart.data = PieData(dataSet)
-            chart.invalidate()
-        }
-    )
-}
-
-@Composable
-fun AlarmFrequencyBarChart() {
-    val context = LocalContext.current
-    val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
-    val surfaceColor = MaterialTheme.colorScheme.surface.toArgb()
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface.toArgb()
-
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            BarChart(context).apply {
-                description.isEnabled = false
-                setTouchEnabled(false)
-                setDrawGridBackground(false)
-                
-                xAxis.apply {
-                    position = XAxis.XAxisPosition.BOTTOM
-                    setDrawGridLines(false)
-                    textColor = onSurfaceColor
-                    valueFormatter = IndexAxisValueFormatter(arrayOf("T2", "T3", "T4", "T5", "T6", "T7", "CN"))
-                }
-                
-                axisLeft.apply {
-                    setDrawGridLines(true)
-                    textColor = onSurfaceColor
-                    axisMinimum = 0f
-                }
-                
-                axisRight.isEnabled = false
-                legend.textColor = onSurfaceColor
-                
-                setBackgroundColor(surfaceColor)
-            }
-        },
-        update = { chart ->
-            val entries = listOf(
-                BarEntry(0f, 2f),
-                BarEntry(1f, 3f),
-                BarEntry(2f, 2f),
-                BarEntry(3f, 4f),
-                BarEntry(4f, 3f),
-                BarEntry(5f, 2f),
-                BarEntry(6f, 1f)
-            )
-
-            val dataSet = BarDataSet(entries, "Số lần báo thức").apply {
-                color = primaryColor
-                valueTextColor = onSurfaceColor
-                valueTextSize = 10f
-            }
-
-            chart.data = BarData(dataSet)
-            chart.invalidate()
-        }
-    )
 }

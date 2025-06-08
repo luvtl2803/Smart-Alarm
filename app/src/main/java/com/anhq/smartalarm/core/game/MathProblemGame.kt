@@ -6,8 +6,8 @@ import kotlin.random.Random
 
 class MathProblemGame(private val difficulty: GameDifficulty) : AlarmGame() {
     override val type = AlarmGameType.MATH_PROBLEM
-    override val title = "Math Problem"
-    override val description = "Solve the math problem to stop the alarm"
+    override val title = "Toán học"
+    override val description = "Giải bài toán để tắt báo thức"
 
     private var firstNumber: Int = 0
     private var secondNumber: Int = 0

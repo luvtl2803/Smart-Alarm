@@ -2,7 +2,7 @@ package com.anhq.smartalarm.core.database.di
 
 import android.content.Context
 import androidx.room.Room
-import com.anhq.smartalarm.core.database.AlarmDatabase
+import com.anhq.smartalarm.core.database.AppDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,11 +16,11 @@ object DatabaseModule {
 
     @Singleton
     @Provides
-    fun providesAlarmDatabase(
+    fun providesAppDatabase(
         @ApplicationContext context: Context
-    ): AlarmDatabase = Room.databaseBuilder(
+    ): AppDatabase = Room.databaseBuilder(
         context,
-        AlarmDatabase::class.java,
-        "alarm-database"
+        AppDatabase::class.java,
+        "smart-alarm-database"
     ).build()
 }

@@ -10,6 +10,8 @@ object AlarmGameFactory {
             AlarmGameType.MATH_PROBLEM -> MathProblemGame(difficulty)
             AlarmGameType.MEMORY_TILES -> MemoryTilesGame(difficulty)
             AlarmGameType.SHAKE_PHONE -> ShakePhoneGame(context, difficulty)
+            AlarmGameType.MEMORY_CARD -> MemoryCardGame(difficulty)
+            AlarmGameType.WORD_PUZZLE -> WordPuzzleGame(difficulty)
             AlarmGameType.NONE -> object : AlarmGame() {
                 override val type = AlarmGameType.NONE
                 override val title = "No Game"

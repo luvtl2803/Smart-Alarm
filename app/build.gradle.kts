@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "com.anhq.smartalarm"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -85,7 +85,6 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.core.splashscreen)
     implementation("com.airbnb.android:lottie-compose:6.3.0")
-    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
     // hilt
     implementation(libs.hilt.android)
@@ -113,7 +112,24 @@ dependencies {
     // work manager
     implementation(libs.androidx.work.runtime.ktx)
     // compose chart
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
-    implementation(libs.vico.views)
+    implementation("com.patrykandpatrick.vico:compose:1.13.1")
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
+    implementation("com.patrykandpatrick.vico:core:1.13.1")
+
+    // Health Connect
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha02")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -22,7 +22,7 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.anhq.smartalarm.R
-import com.anhq.smartalarm.features.home.navigation.navigateToHome
+import com.anhq.smartalarm.features.alarm.navigation.navigateToAlarm
 import com.anhq.smartalarm.features.onboarding.navigation.navigateToOnboarding
 import kotlinx.coroutines.delay
 
@@ -36,7 +36,7 @@ fun SplashRoute(
             if (viewModel.isFirstRun()) {
                 navController.navigateToOnboarding()
             } else {
-                navController.navigateToHome()
+                navController.navigateToAlarm()
             }
         }
     )
@@ -48,7 +48,7 @@ fun SplashScreen(
 ) {
     val scale = remember { Animatable(0.3f) }
     val composition by rememberLottieComposition(
-        spec = LottieCompositionSpec.RawRes(R.raw.alarm_clock_lottie)
+        spec = LottieCompositionSpec.RawRes(R.raw.clock_splash)
     )
 
     LaunchedEffect(key1 = true) {

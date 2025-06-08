@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Smart Alarm</string>
+    <string name="app_name">Báo thức thông minh</string>
     
     <!-- Common -->
     <string name="save">Lưu</string>
@@ -10,10 +10,10 @@
     <string name="add">Thêm</string>
     
     <!-- Bottom Navigation -->
-    <string name="nav_home">Trang chủ</string>
+    <string name="nav_timer">Hẹn giờ</string>
     <string name="nav_alarm">Báo thức</string>
     <string name="nav_statistics">Thống kê</string>
-    <string name="nav_settings">Cài đặt</string>
+    <string name="nav_settings">Cá nhân hóa</string>
 
     <!-- Alarm Screen -->
     <string name="no_alarms">Chưa có báo thức nào</string>

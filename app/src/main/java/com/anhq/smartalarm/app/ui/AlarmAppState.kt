@@ -11,8 +11,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
 import com.anhq.smartalarm.app.navigation.TopLevelDestination
 import com.anhq.smartalarm.features.alarm.navigation.navigateToAlarm
-import com.anhq.smartalarm.features.home.navigation.HomeRoute
-import com.anhq.smartalarm.features.home.navigation.navigateToHome
+import com.anhq.smartalarm.features.timer.navigation.TimerRoute
+import com.anhq.smartalarm.features.timer.navigation.navigateToTimer
 import com.anhq.smartalarm.features.setting.navigation.navigateToSetting
 import com.anhq.smartalarm.features.statistics.navigation.navigateToStatistics
 
@@ -51,7 +51,7 @@ class AlarmAppState(
 
     fun navigateToTopLevelDestination(topLevelDestination: TopLevelDestination) {
         val topLevelNavOptions = navOptions {
-            popUpTo<HomeRoute> {
+            popUpTo<TimerRoute> {
                 saveState = true
             }
             launchSingleTop = true
@@ -59,16 +59,16 @@ class AlarmAppState(
         }
 
         when (topLevelDestination) {
-            TopLevelDestination.HOME -> {
-                navController.navigateToHome(topLevelNavOptions)
+            TopLevelDestination.ALARM -> {
+                navController.navigateToAlarm(topLevelNavOptions)
+            }
+            TopLevelDestination.TIMER -> {
+                navController.navigateToTimer(topLevelNavOptions)
             }
             TopLevelDestination.STATISTICS -> {
                 navController.navigateToStatistics(topLevelNavOptions)
             }
-            TopLevelDestination.ALARM -> {
-                navController.navigateToAlarm(topLevelNavOptions)
-            }
-            TopLevelDestination.USER -> {
+            TopLevelDestination.SETTINGS -> {
                 navController.navigateToSetting(topLevelNavOptions)
             }
         }

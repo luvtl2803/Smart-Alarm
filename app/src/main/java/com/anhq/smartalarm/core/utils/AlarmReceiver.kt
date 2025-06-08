@@ -90,16 +90,16 @@ class AlarmReceiver : BroadcastReceiver() {
 
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val alarm = alarmRepository.getAlarmById(alarmId).firstOrNull()
+                val alarm = alarmRepository.getAlarmById(alarmId).firstOrNull()
                     Log.d(TAG, "Retrieved alarm: $alarm")
                     
-                    alarm?.let {
+            alarm?.let {
                         withContext(Dispatchers.Main) {
                             // Start vibration if enabled
-                            if (it.isVibrate) {
+                if (it.isVibrate) {
                                 Log.d(TAG, "Starting vibration for alarm ${it.id}")
-                                startVibration(context)
-                            }
+                    startVibration(context)
+                }
                             
                             // Play alarm sound
                             playAlarmSound(context, it)
@@ -111,7 +111,7 @@ class AlarmReceiver : BroadcastReceiver() {
                                 isRepeating = intent.getBooleanExtra("is_repeating", false),
                                 snoozeCount = intent.getIntExtra("snooze_count", 0)
                             )
-                        }
+            }
                     } ?: Log.e(TAG, "Alarm not found for ID: $alarmId")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error processing alarm", e)

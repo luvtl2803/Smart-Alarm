@@ -15,8 +15,8 @@ class ShakePhoneGame(
     private val difficulty: GameDifficulty
 ) : AlarmGame(), SensorEventListener {
     override val type = AlarmGameType.SHAKE_PHONE
-    override val title = "Shake Phone"
-    override val description = "Shake your phone to stop the alarm"
+    override val title = "Lắc điện thoại"
+    override val description = "Lắc điện thoại để tắt báo thức"
 
     private var sensorManager: SensorManager? = null
     private var accelerometer: Sensor? = null

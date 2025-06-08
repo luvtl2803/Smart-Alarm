@@ -51,7 +51,8 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.anhq.smartalarm.R
-import com.anhq.smartalarm.features.home.navigation.navigateToHome
+import com.anhq.smartalarm.features.alarm.navigation.navigateToAlarm
+import com.anhq.smartalarm.features.timer.navigation.navigateToTimer
 
 data class OnboardingPage(
     val title: Int,
@@ -90,7 +91,7 @@ fun OnboardingRoute(
     ) { isGranted ->
         if (isGranted) {
             viewModel.setFirstRun(false)
-            navController.navigateToHome()
+            navController.navigateToTimer()
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 activity != null &&
@@ -125,7 +126,7 @@ fun OnboardingRoute(
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
             viewModel.setFirstRun(false)
-            navController.navigateToHome()
+            navController.navigateToAlarm()
         }
     }
     OnboardingScreen(

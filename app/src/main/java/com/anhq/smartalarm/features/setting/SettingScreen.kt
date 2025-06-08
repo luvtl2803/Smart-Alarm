@@ -1,13 +1,15 @@
 package com.anhq.smartalarm.features.setting
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -23,12 +25,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anhq.smartalarm.R
 import com.anhq.smartalarm.core.designsystem.theme.SmartAlarmTheme
+import com.anhq.smartalarm.core.designsystem.theme.headline3
 import com.anhq.smartalarm.core.model.GameDifficulty
 import com.anhq.smartalarm.core.model.SettingsUiState
 import com.anhq.smartalarm.core.model.ThemeOption
@@ -81,13 +85,23 @@ fun SettingScreen(
     modifier: Modifier = Modifier
 ) {
     Scaffold(
+        modifier = Modifier.padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
+        topBar = {
+            Text(
+                text = "Cài đặt",
+                style = MaterialTheme.typography.headline3,
+                modifier = Modifier
+                    .fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+        },
         snackbarHost = { SnackbarHost(snackBarHostState) }
     ) { paddingValues ->
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(8.dp)
+                .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             // Theme Settings

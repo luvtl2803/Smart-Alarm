@@ -10,8 +10,8 @@ import kotlin.random.Random
 
 class MemoryTilesGame(difficulty: GameDifficulty) : AlarmGame() {
     override val type = AlarmGameType.MEMORY_TILES
-    override val title = "Memory Tiles"
-    override val description = "Remember and repeat the pattern"
+    override val title = "Ghi nhớ ô vuông"
+    override val description = "Ghi nhớ và lặp lại mẫu hình"
     private val gridSize = 3 // 3x3 grid
     
     private val sequenceLength = when (difficulty) {
