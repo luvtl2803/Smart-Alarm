@@ -7,14 +7,15 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import com.anhq.smartalarm.app.ui.AlarmAppState
 import com.anhq.smartalarm.features.addalarm.navigation.addAlarmScreen
+import com.anhq.smartalarm.features.alarm.navigation.AlarmRoute
 import com.anhq.smartalarm.features.alarm.navigation.alarmScreen
 import com.anhq.smartalarm.features.editalarm.navigation.editAlarmScreen
-import com.anhq.smartalarm.features.timer.navigation.timerScreen
 import com.anhq.smartalarm.features.onboarding.navigation.onboardingScreen
 import com.anhq.smartalarm.features.setting.navigation.settingScreen
 import com.anhq.smartalarm.features.splash.navigation.SplashRoute
 import com.anhq.smartalarm.features.splash.navigation.splashScreen
 import com.anhq.smartalarm.features.statistics.navigation.statisticsScreen
+import com.anhq.smartalarm.features.timer.navigation.timerScreen
 
 @Composable
 fun AlarmNavHost(

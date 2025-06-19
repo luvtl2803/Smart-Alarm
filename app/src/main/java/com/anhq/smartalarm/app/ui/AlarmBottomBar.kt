@@ -3,7 +3,6 @@ package com.anhq.smartalarm.app.ui
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.anhq.smartalarm.app.navigation.TopLevelDestination
 import com.anhq.smartalarm.core.designsystem.theme.Pure01
 import com.anhq.smartalarm.core.designsystem.theme.Pure02
-import com.anhq.smartalarm.core.designsystem.theme.label3
+import com.anhq.smartalarm.core.designsystem.theme.label1
 
 @Composable
 fun NanaBottomBar(
@@ -65,12 +64,12 @@ fun NanaBottomBar(
                     if (selected)
                         Text(
                             text = stringResource(id = destination.labelId),
-                            style = MaterialTheme.typography.label3
+                            style = label1
                         )
                     else
                         Text(
                             text = stringResource(id = destination.labelId),
-                            style = MaterialTheme.typography.label3
+                            style = label1
                         )
                 }
             )

@@ -13,7 +13,5 @@ data class TimerEntity(
     val lastTickTime: Long,
     val isRunning: Boolean,
     val isPaused: Boolean,
-    val soundUri: String,
-    val isVibrate: Boolean,
     val endedAt: Long? = null
 ) 

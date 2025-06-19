@@ -1,7 +1,6 @@
 package com.anhq.smartalarm.core.ui
 
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -11,9 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
-import com.anhq.smartalarm.core.designsystem.theme.body5
+import com.anhq.smartalarm.core.designsystem.theme.body2
+import com.anhq.smartalarm.core.designsystem.theme.body4
 import com.anhq.smartalarm.core.designsystem.theme.label1
-import com.anhq.smartalarm.core.designsystem.theme.label3
 
 @Composable
 fun InputTextDialog(
@@ -30,23 +29,23 @@ fun InputTextDialog(
                 onConfirm(label)
             }) {
                 Text(
-                    text = "OK",
-                    style = MaterialTheme.typography.label3
+                    text = "Lưu lại",
+                    style = body4
                 )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    text = "Cancel",
-                    style = MaterialTheme.typography.label3
+                    text = "Hủy",
+                    style = body4
                 )
             }
         },
         title = {
             Text(
-                text = "Edit label",
-                style = MaterialTheme.typography.label1
+                text = "Đặt tên báo thức",
+                style = label1
             )
         },
         text = {
@@ -54,7 +53,7 @@ fun InputTextDialog(
                 value = label,
                 onValueChange = { label = it },
                 singleLine = true,
-                textStyle = MaterialTheme.typography.body5,
+                textStyle = body2,
             )
         }
     )

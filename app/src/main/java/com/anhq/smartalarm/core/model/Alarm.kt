@@ -20,7 +20,7 @@ data class Alarm(
 ) {
     // Chuyển repeatDays thành chuỗi hiển thị
     fun getRepeatDaysString(): String {
-        if (selectedDays.isEmpty()) return "Once Time"
+        if (selectedDays.isEmpty()) return "Một lần"
         
         val orderedDays = selectedDays.sortedBy { 
             when (it) {
@@ -38,8 +38,6 @@ data class Alarm(
 
     // Tính thời gian đếm ngược từ thời gian hiện tại đến thời gian báo thức
     fun getCountdownTime(currentTimeMillis: Long): String {
-        if (!isActive) return "Disabled"
-
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -108,7 +106,7 @@ data class Alarm(
     }
 
     private fun formatCountdown(timeDifferenceMillis: Long): String {
-        if (timeDifferenceMillis <= 0) return "Now"
+        if (timeDifferenceMillis <= 0) return "Đã tới"
 
         val hours = TimeUnit.MILLISECONDS.toHours(timeDifferenceMillis)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(timeDifferenceMillis) % 60

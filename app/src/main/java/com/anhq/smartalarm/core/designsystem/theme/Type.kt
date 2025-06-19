@@ -1,128 +1,134 @@
 package com.anhq.smartalarm.core.designsystem.theme
 
-import androidx.compose.material3.Typography
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 
-val Typography.headline1: TextStyle
+val headline1: TextStyle
     get() = TextStyle(
-        fontFamily = OxygenBold,
-        fontSize = 28.sp,
-        lineHeight = 48.sp,
+        fontFamily = NotoSansBold,
+        fontSize = 26.sp,
+        lineHeight = 38.sp,
         letterSpacing = 0.sp
     )
 
-val Typography.headline2: TextStyle
+val headline2: TextStyle
     get() = TextStyle(
-        fontFamily = OxygenBold,
-        fontSize = 24.sp,
-        lineHeight = 42.sp,
+        fontFamily = NotoSansBold,
+        fontSize = 22.sp,
+        lineHeight = 34.sp,
         letterSpacing = 0.sp
     )
 
-val Typography.headline3: TextStyle
+val headline3: TextStyle
     get() = TextStyle(
-        fontFamily = OxygenBold,
+        fontFamily = NotoSansBold,
+        fontSize = 20.sp,
+        lineHeight = 30.sp,
+        letterSpacing = 0.sp
+    )
+
+val title1: TextStyle
+    get() = TextStyle(
+        fontFamily = NotoSansBold,
         fontSize = 20.sp,
         lineHeight = 28.sp,
-        letterSpacing = 0.sp
+        letterSpacing = 0.1.sp
     )
 
-val Typography.title1: TextStyle
+val title2: TextStyle
     get() = TextStyle(
-        fontFamily = OxygenRegular,
-        fontSize = 22.sp,
-        lineHeight = 30.sp,
-        letterSpacing = 0.sp
-    )
-
-val Typography.title2: TextStyle
-    get() = TextStyle(
-        fontFamily = OxygenRegular,
-        fontSize = 20.sp,
-        lineHeight = 30.sp,
-        letterSpacing = 0.sp
-    )
-
-val Typography.body1: TextStyle
-    get() = TextStyle(
-        fontFamily = OxygenRegular,
-        fontSize = 24.sp,
-        lineHeight = 27.sp,
-        letterSpacing = 0.2.sp
-    )
-
-val Typography.body2: TextStyle
-    get() = TextStyle(
-        fontFamily = OxygenRegular,
-        fontSize = 22.sp,
-        lineHeight = 27.sp,
-        letterSpacing = 0.2.sp
-    )
-
-val Typography.body3_bold: TextStyle
-    get() = TextStyle(
-        fontFamily = OxygenBold,
-        fontSize = 20.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.15.sp
-    )
-
-val Typography.body3_medium: TextStyle
-    get() = TextStyle(
-        fontFamily = OxygenRegular,
-        fontSize = 20.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.15.sp
-    )
-
-val Typography.body4: TextStyle
-    get() = TextStyle(
-        fontFamily = OxygenRegular,
+        fontFamily = NotoSansBold,
         fontSize = 18.sp,
-        lineHeight = 21.sp,
+        lineHeight = 26.sp,
         letterSpacing = 0.1.sp
     )
 
-val Typography.body5: TextStyle
+val title3: TextStyle
     get() = TextStyle(
-        fontFamily = OxygenRegular,
+        fontFamily = NotoSansBold,
         fontSize = 16.sp,
-        lineHeight = 21.sp,
+        lineHeight = 24.sp,
         letterSpacing = 0.1.sp
     )
 
-val Typography.label1: TextStyle
+val body1: TextStyle
     get() = TextStyle(
-        fontFamily = OxygenBold,
-        fontSize = 20.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.5.sp
+        fontFamily = NotoSansRegular,
+        fontSize = 18.sp,
+        lineHeight = 26.sp,
+        letterSpacing = 0.15.sp
     )
 
-val Typography.label2: TextStyle
+val body2: TextStyle
     get() = TextStyle(
-        fontFamily = OxygenBold,
+        fontFamily = NotoSansRegular,
         fontSize = 16.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.5.sp
+        lineHeight = 24.sp,
+        letterSpacing = 0.15.sp
     )
 
-val Typography.label3: TextStyle
+val body3_bold: TextStyle
     get() = TextStyle(
-        fontFamily = OxygenBold,
+        fontFamily = NotoSansBold,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        letterSpacing = 0.1.sp
+    )
+
+val body3_medium: TextStyle
+    get() = TextStyle(
+        fontFamily = NotoSansRegular,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        letterSpacing = 0.1.sp
+    )
+
+val body4: TextStyle
+    get() = TextStyle(
+        fontFamily = NotoSansRegular,
         fontSize = 14.sp,
-        lineHeight = 16.5.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.1.sp
+    )
+
+val body5: TextStyle
+    get() = TextStyle(
+        fontFamily = NotoSansRegular,
+        fontSize = 12.sp,
+        lineHeight = 18.sp,
+        letterSpacing = 0.1.sp
+    )
+
+val label1: TextStyle
+    get() = TextStyle(
+        fontFamily = NotoSansBold,
+        fontSize = 14.sp,
+        lineHeight = 18.sp,
         letterSpacing = 0.5.sp
     )
 
-val Typography.gradient1: TextStyle
+val label2: TextStyle
+    get() = TextStyle(
+        fontFamily = NotoSansBold,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp
+    )
+
+val label3: TextStyle
+    get() = TextStyle(
+        fontFamily = NotoSansBold,
+        fontSize = 10.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.5.sp
+    )
+
+val gradient1: TextStyle
     get() = TextStyle(
         brush = Brush.horizontalGradient(listOf(Pure01, Pure02)),
-        fontFamily = OxygenBold,
+        fontFamily = NotoSansBold,
         fontSize = 16.sp,
-        lineHeight = 27.sp,
+        lineHeight = 24.sp,
         letterSpacing = 0.2.sp
     )

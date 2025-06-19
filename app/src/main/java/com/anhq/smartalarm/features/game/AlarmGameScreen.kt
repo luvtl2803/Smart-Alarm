@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -229,7 +228,7 @@ fun MemoryTilesGameContent(game: MemoryTilesGame) {
     ) {
         Text(
             text = if (showingSequence) "Xem mẫu hình" else "Lặp lại mẫu hình",
-            style = MaterialTheme.typography.title1,
+            style = title1,
             color = MaterialTheme.colorScheme.onBackground
         )
 
@@ -364,13 +363,13 @@ fun MemoryCardGameContent(game: MemoryCardGame) {
     ) {
         Text(
             text = "Tìm các cặp thẻ giống nhau",
-            style = MaterialTheme.typography.title1,
+            style = title1,
             color = MaterialTheme.colorScheme.onBackground
         )
 
         Text(
             text = "${game.getMatchedPairs()}/${game.getTotalPairs()} cặp",
-            style = MaterialTheme.typography.title2,
+            style = title2,
             color = MaterialTheme.colorScheme.onBackground
         )
 
@@ -441,7 +440,7 @@ fun WordPuzzleGameContent(game: WordPuzzleGame) {
     ) {
         Text(
             text = "Từ cần giải mã:",
-            style = MaterialTheme.typography.title2,
+            style = title2,
             color = MaterialTheme.colorScheme.onBackground
         )
 

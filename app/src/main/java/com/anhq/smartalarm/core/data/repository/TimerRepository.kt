@@ -41,8 +41,6 @@ class TimerRepository @Inject constructor(
             lastTickTime = lastTickTime,
             isRunning = isRunning,
             isPaused = isPaused,
-            soundUri = soundUri,
-            isVibrate = isVibrate,
             endedAt = endedAt
         )
     }
@@ -56,8 +54,6 @@ class TimerRepository @Inject constructor(
             lastTickTime = lastTickTime,
             isRunning = isRunning,
             isPaused = isPaused,
-            soundUri = soundUri,
-            isVibrate = isVibrate,
             endedAt = endedAt
         )
     }

@@ -116,8 +116,9 @@ dependencies {
     implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
     implementation("com.patrykandpatrick.vico:core:1.13.1")
 
-    // Health Connect
-    implementation("androidx.health.connect:connect-client:1.1.0-alpha02")
+    implementation("com.github.commandiron:WheelPickerCompose:1.1.11")
+
+    implementation("com.maxkeppeler.sheets-compose-dialogs:duration:1.3.0")
 }
 
 

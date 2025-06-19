@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @AndroidEntryPoint
 class TimerReceiver : BroadcastReceiver() {
@@ -266,15 +267,15 @@ class TimerReceiver : BroadcastReceiver() {
         val minutes = seconds / 60
         val hours = minutes / 60
         return when {
-            hours > 0 -> String.format(
+            hours > 0 -> String.format(Locale.US,
                 "%d giờ %02d phút %02d giây",
                 hours,
                 minutes % 60,
                 seconds % 60
             )
 
-            minutes > 0 -> String.format("%d phút %02d giây", minutes, seconds % 60)
-            else -> String.format("%d giây", seconds)
+            minutes > 0 -> String.format(Locale.US,"%d phút %02d giây", minutes, seconds % 60)
+            else -> String.format(Locale.US,"%d giây", seconds)
         }
     }
 

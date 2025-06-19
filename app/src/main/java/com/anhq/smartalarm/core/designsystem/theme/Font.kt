@@ -4,6 +4,5 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import com.anhq.smartalarm.R
 
-val OxygenBold = FontFamily(Font(R.font.oxygen_bold))
-val OxygenRegular= FontFamily(Font(R.font.oxygen_regular))
-val OxygenLight= FontFamily(Font(R.font.oxygen_light))
+val NotoSansBold = FontFamily(Font(R.font.notosans_bold))
+val NotoSansRegular= FontFamily(Font(R.font.notosans_regular))

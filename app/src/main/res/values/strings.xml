@@ -7,7 +7,7 @@
     <string name="cancel">Hủy</string>
     <string name="delete">Xóa</string>
     <string name="edit">Sửa</string>
-    <string name="add">Thêm</string>
+    <string name="add">Thêm báo thức</string>
     
     <!-- Bottom Navigation -->
     <string name="nav_timer">Hẹn giờ</string>
@@ -61,14 +61,29 @@
 
     <!-- Onboarding -->
     <string name="onboarding_title_1">Báo thức thông minh</string>
-    <string name="onboarding_desc_1">Tạo thói quen thức dậy đúng giờ với Smart Alarm</string>
-    <string name="onboarding_title_2">Trò chơi thú vị</string>
-    <string name="onboarding_desc_2">Đánh thức não bộ với các trò chơi nhỏ buổi sáng</string>
+    <string name="onboarding_desc_1">Đặt báo thức và chọn trò chơi để tắt báo thức</string>
+    <string name="onboarding_title_2">Trò chơi đánh thức</string>
+    <string name="onboarding_desc_2">Giải các câu đố và trò chơi để tắt báo thức</string>
     <string name="onboarding_title_3">Theo dõi giấc ngủ</string>
-    <string name="onboarding_desc_3">Xem thống kê và cải thiện thói quen thức dậy</string>
+    <string name="onboarding_desc_3">Xem thống kê về giấc ngủ của bạn</string>
+    <string name="onboarding_title_4">Quyền thông báo</string>
+    <string name="onboarding_desc_4">Để gửi thông báo báo thức, chúng tôi cần quyền thông báo</string>
+    <string name="onboarding_title_5">Quyền truy cập dữ liệu</string>
+    <string name="onboarding_desc_5">Để theo dõi giấc ngủ của bạn, chúng tôi cần quyền truy cập dữ liệu sử dụng</string>
     <string name="get_started">Bắt đầu</string>
+    <string name="back">Quay lại</string>
+    <string name="next">Tiếp tục</string>
+    <string name="grant_permission">Cấp quyền</string>
 
     <!-- Home Screen -->
     <string name="home_quote">Đừng dừng lại khi mệt mỏi, hãy dừng lại khi hoàn thành</string>
     <string name="next_alarm">Báo thức tiếp theo</string>
+
+    <!-- Sleep Time Picker Screen -->
+    <string name="sleep_time_title">Thời gian đi ngủ</string>
+    <string name="sleep_time_desc">Chọn thời gian bạn thường đi ngủ</string>
+    <string name="sleep_time_explanation">Thời gian này sẽ giúp chúng tôi xác định khoảng thời gian bạn ngủ để theo dõi giấc ngủ chính xác hơn. Chúng tôi sẽ sử dụng thông tin này kết hợp với dữ liệu sử dụng điện thoại để phân tích giấc ngủ của bạn.</string>
+
+    <string name="suggested_times">Thời gian gợi ý</string>
+    <string name="alarm_suggestion_format">%1$02d:%2$02d</string>
 </resources>

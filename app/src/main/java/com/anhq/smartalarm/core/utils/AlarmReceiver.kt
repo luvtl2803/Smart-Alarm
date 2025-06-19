@@ -137,28 +137,26 @@ class AlarmReceiver : BroadcastReceiver() {
             notificationManager.notify(alarm.id, notification)
             
             // Start appropriate activity based on game type
-            val activityIntent = createFullScreenIntent(context, alarm, isRepeating, snoozeCount).send()
+            createFullScreenIntent(context, alarm, isRepeating, snoozeCount).send()
         } catch (e: Exception) {
             Log.e(TAG, "Error showing notification or starting activity", e)
         }
     }
 
     private fun createNotificationChannel(notificationManager: NotificationManager) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Báo thức",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Thông báo báo thức"
-                setBypassDnd(true)
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                setShowBadge(true)
-                setSound(null, null)
-                enableVibration(false)
-            }
-            notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Báo thức",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Thông báo báo thức"
+            setBypassDnd(true)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            setShowBadge(true)
+            setSound(null, null)
+            enableVibration(false)
         }
+        notificationManager.createNotificationChannel(channel)
     }
 
     private fun buildNotification(context: Context, alarm: Alarm, isRepeating: Boolean, snoozeCount: Int): Notification {
@@ -226,6 +224,7 @@ class AlarmReceiver : BroadcastReceiver() {
     private fun createStopIntent(context: Context, alarmId: Int): PendingIntent {
         val intent = Intent(context, StopReceiver::class.java).apply {
             putExtra("alarm_id", alarmId)
+            putExtra("triggered_at", System.currentTimeMillis())
         }
         return PendingIntent.getBroadcast(
             context,
@@ -240,6 +239,7 @@ class AlarmReceiver : BroadcastReceiver() {
             putExtra("alarm_id", alarmId)
             putExtra("is_repeating", isRepeating)
             putExtra("snooze_count", snoozeCount)
+            putExtra("triggered_at", System.currentTimeMillis())
         }
         return PendingIntent.getBroadcast(
             context,
@@ -257,49 +257,38 @@ class AlarmReceiver : BroadcastReceiver() {
                     context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
                 Log.d(TAG, "Using VibratorManager for Android 12+")
                 vibratorManager.defaultVibrator.also {
-                    Log.d(TAG, "Successfully got vibrator from VibratorManager: ${it != null}")
+                    Log.d(TAG, "Successfully got vibrator from VibratorManager: ${true}")
                 }
             } else {
                 Log.d(TAG, "Using legacy Vibrator service")
                 context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val effect = VibrationEffect.createWaveform(
-                    vibrationPattern,
-                    vibrationAmplitudes,
-                    0 // 0 means repeat indefinitely
-                )
-                Log.d(TAG, "Starting vibration with waveform effect")
-                vibrator?.let {
-                    if (it.hasVibrator()) {
-                        it.vibrate(effect, AudioAttributes.Builder()
+            val effect = VibrationEffect.createWaveform(
+                vibrationPattern,
+                vibrationAmplitudes,
+                0 // 0 means repeat indefinitely
+            )
+            Log.d(TAG, "Starting vibration with waveform effect")
+            vibrator?.let {
+                if (it.hasVibrator()) {
+                    it.vibrate(
+                        effect, AudioAttributes.Builder()
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                             .setUsage(AudioAttributes.USAGE_ALARM)
-                            .build())
-                        Log.d(TAG, "Vibration started with waveform effect")
-                    } else {
-                        Log.e(TAG, "Device does not have vibrator capability")
-                    }
-                } ?: Log.e(TAG, "Vibrator is null when trying to start vibration")
-            } else {
-                Log.d(TAG, "Starting legacy vibration")
-                @Suppress("DEPRECATION")
-                vibrator?.let {
-                    if (it.hasVibrator()) {
-                        it.vibrate(vibrationPattern, 0)
-                        Log.d(TAG, "Legacy vibration started")
-                    } else {
-                        Log.e(TAG, "Device does not have vibrator capability")
-                    }
-                } ?: Log.e(TAG, "Vibrator is null when trying to start legacy vibration")
-            }
+                            .build()
+                    )
+                    Log.d(TAG, "Vibration started with waveform effect")
+                } else {
+                    Log.e(TAG, "Device does not have vibrator capability")
+                }
+            } ?: Log.e(TAG, "Vibrator is null when trying to start vibration")
         } catch (e: Exception) {
             Log.e(TAG, "Error starting vibration", e)
         }
     }
 
-    fun playAlarmSound(context: Context, alarm: Alarm) {
+    private fun playAlarmSound(context: Context, alarm: Alarm) {
         try {
             // Release existing media player if exists
             mediaPlayer?.release()

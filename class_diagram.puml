@@ -48,11 +48,26 @@ class Timer {
     +remainingTimeMillis: Long
     +isRunning: Boolean
     +isPaused: Boolean
-    +soundUri: String
-    +isVibrate: Boolean
-    +createdAt: Long
     +endedAt: Long?
     +lastTickTime: Long
+}
+
+class SleepData {
+    +date: LocalDateTime
+    +durationMinutes: Long
+    +startTime: Instant
+    +endTime: Instant
+}
+
+class EnhancedSleepData {
+    +date: LocalDateTime
+    +durationMinutes: Long
+    +startTime: Instant
+    +endTime: Instant
+    +alarmTriggerTime: Instant?
+    +userAction: String?
+    +timeToAction: Long?
+    +snoozeCount: Int
 }
 
 ' Database Entities
@@ -76,9 +91,34 @@ class TimerEntity {
     +lastTickTime: Long
     +isRunning: Boolean
     +isPaused: Boolean
-    +soundUri: String
-    +isVibrate: Boolean
     +endedAt: Long?
+}
+
+class AlarmHistoryEntity {
+    +id: Int
+    +alarmId: Int
+    +triggeredAt: Long
+    +userAction: String
+    +actionTime: Long
+    +dayOfWeek: DayOfWeek
+}
+
+class AlarmSuggestionEntity {
+    +id: Int
+    +hour: Int
+    +minute: Int
+    +dayOfWeek: DayOfWeek
+    +confidence: Float
+    +lastUpdated: Long
+    +suggestedCount: Int
+    +acceptedCount: Int
+}
+
+class DeviceActivityEntity {
+    +id: Int
+    +timestamp: Long
+    +isActive: Boolean
+    +dayOfWeek: Int
 }
 
 ' Games
@@ -101,39 +141,25 @@ class MathProblemGame {
     -correctAnswer: Int
     +getProblem(): String
     +checkAnswer(answer: Int): Boolean
-    -generateNewProblem()
-    -generateNumberForAddition(): Int
-    -generateNumberForSubtraction(): Int
-    -generateNumberForMultiplication(): Int
 }
 
 class MemoryTilesGame {
     -difficulty: GameDifficulty
     -gridSize: Int
     -sequenceLength: Int
-    -showDuration: Long
-    -pauseDuration: Long
-    -finalShowDuration: Long
     -sequence: List<Int>
     -playerSequence: List<Int>
     +onSequenceShow: (List<Int>) -> Unit
     +onSequenceComplete: () -> Unit
-    +onWrongTile: (Int) -> Unit
     +startNewGame()
-    +getGridSize(): Int
-    +getCorrectTiles(): Int
-    +getTotalTiles(): Int
 }
 
 class ShakePhoneGame {
-    -context: Context
     -difficulty: GameDifficulty
     -sensorManager: SensorManager
     -accelerometer: Sensor
     -shakeThreshold: Float
     -requiredShakes: Int
-    -minShakeInterval: Long
-    -shakeCount: Int
     +onShake: (Int, Int) -> Unit
     +startListening()
     +stopListening()
@@ -143,34 +169,20 @@ class MemoryCardGame {
     -difficulty: GameDifficulty
     -gridSize: Int
     -cards: List<Card>
-    -flippedCards: List<Card>
     -matchedPairs: Int
-    -totalPairs: Int
-    -showDuration: Long
     +onCardFlip: (Int) -> Unit
     +onPairMatched: () -> Unit
-    +onPairMismatched: () -> Unit
     +flipCard(position: Int): Boolean
-    +startNewGame()
-    -generateCards()
-    -shuffleCards()
-    -checkMatch(): Boolean
 }
 
 class WordPuzzleGame {
     -difficulty: GameDifficulty
     -currentWord: String
     -scrambledWord: String
-    -wordList: List<String>
     -attemptsLeft: Int
-    -maxAttempts: Int
     +getCurrentScrambledWord(): String
     +checkAnswer(answer: String): Boolean
-    +getAttemptsLeft(): Int
     +getHint(): String
-    -generateNewWord()
-    -scrambleWord(word: String): String
-    -loadWordList()
 }
 
 ' Factory
@@ -190,6 +202,11 @@ Alarm --> "*" DayOfWeek
 
 AlarmEntity --> "1" AlarmGameType
 AlarmEntity --> "*" DayOfWeek
+
+AlarmHistoryEntity --> "1" DayOfWeek
+AlarmHistoryEntity --> "1" AlarmEntity
+
+AlarmSuggestionEntity --> "1" DayOfWeek
 
 AlarmGameFactory ..> AlarmGame
 AlarmGameFactory ..> AlarmGameType

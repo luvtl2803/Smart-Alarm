@@ -1,7 +1,5 @@
 package com.anhq.smartalarm.core.model
 
-import android.net.Uri
-
 data class Timer(
     val id: Int = 0,
     val initialTimeMillis: Long, // Original time when timer was created
@@ -9,8 +7,6 @@ data class Timer(
     val remainingTimeMillis: Long,
     val isRunning: Boolean = false,
     val isPaused: Boolean = false,
-    val soundUri: String = "",
-    val isVibrate: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val endedAt: Long? = null,
     val lastTickTime: Long = System.currentTimeMillis()

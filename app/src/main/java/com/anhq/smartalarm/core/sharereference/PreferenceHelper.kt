@@ -23,6 +23,12 @@ class PreferenceHelper @Inject constructor(
         private const val KEY_DIFFICULTY = "difficulty"
         private const val KEY_SNOOZE_DURATION = "snooze_duration"
         private const val KEY_MAX_SNOOZE_COUNT = "max_snooze_count"
+        private const val KEY_SLEEP_TIME_HOUR = "sleep_time_hour"
+        private const val KEY_SLEEP_TIME_MINUTE = "sleep_time_minute"
+        private const val KEY_NOTIFICATION_PERMISSION = "notification_permission"
+        private const val KEY_USAGE_STATS_PERMISSION = "usage_stats_permission"
+        private const val KEY_TIMER_DEFAULT_SOUND_URI = "timer_default_sound_uri"
+        private const val KEY_TIMER_DEFAULT_VIBRATE = "timer_default_vibrate"
     }
 
     val settingsFlow: Flow<SettingsUiState> = flow {
@@ -39,6 +45,8 @@ class PreferenceHelper @Inject constructor(
             ),
             snoozeDurationMinutes = prefs.getInt(KEY_SNOOZE_DURATION, 5),
             maxSnoozeCount = prefs.getInt(KEY_MAX_SNOOZE_COUNT, 3),
+            timerDefaultSoundUri = prefs.getString(KEY_TIMER_DEFAULT_SOUND_URI, "") ?: "",
+            timerDefaultVibrate = prefs.getBoolean(KEY_TIMER_DEFAULT_VIBRATE, true)
         )
     }
 
@@ -48,6 +56,8 @@ class PreferenceHelper @Inject constructor(
                 .putString(KEY_DIFFICULTY, settings.gameDifficulty.name)
                 .putInt(KEY_SNOOZE_DURATION, settings.snoozeDurationMinutes)
                 .putInt(KEY_MAX_SNOOZE_COUNT, settings.maxSnoozeCount)
+                .putString(KEY_TIMER_DEFAULT_SOUND_URI, settings.timerDefaultSoundUri)
+                .putBoolean(KEY_TIMER_DEFAULT_VIBRATE, settings.timerDefaultVibrate)
         }
     }
 
@@ -57,11 +67,25 @@ class PreferenceHelper @Inject constructor(
         )
     }
 
-
     var isFirstRun: Boolean
         get() = prefs.getBoolean(IS_FIRST_RUN, true)
         set(value) = prefs.edit { putBoolean(IS_FIRST_RUN, value) }
 
+    var sleepTimeHour: Int
+        get() = prefs.getInt(KEY_SLEEP_TIME_HOUR, 22) // Mặc định 22:00
+        set(value) = prefs.edit { putInt(KEY_SLEEP_TIME_HOUR, value) }
+
+    var sleepTimeMinute: Int
+        get() = prefs.getInt(KEY_SLEEP_TIME_MINUTE, 0)
+        set(value) = prefs.edit { putInt(KEY_SLEEP_TIME_MINUTE, value) }
+
+    var isNotificationPermissionGranted: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFICATION_PERMISSION, false)
+        set(value) = prefs.edit { putBoolean(KEY_NOTIFICATION_PERMISSION, value) }
+
+    var isUsageStatsPermissionGranted: Boolean
+        get() = prefs.getBoolean(KEY_USAGE_STATS_PERMISSION, false)
+        set(value) = prefs.edit { putBoolean(KEY_USAGE_STATS_PERMISSION, value) }
 
     fun clearAll() {
         prefs.edit { clear() }

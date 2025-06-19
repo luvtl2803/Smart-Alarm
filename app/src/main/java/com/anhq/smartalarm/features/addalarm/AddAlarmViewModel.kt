@@ -11,13 +11,13 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TimePickerState
+import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.anhq.smartalarm.core.data.repository.AlarmRepository
+import com.anhq.smartalarm.core.data.repository.AlarmSuggestionRepository
 import com.anhq.smartalarm.core.model.Alarm
 import com.anhq.smartalarm.core.model.AlarmGameType
 import com.anhq.smartalarm.core.model.DayOfWeek
@@ -27,6 +27,7 @@ import com.anhq.smartalarm.core.utils.AlarmSound
 import com.anhq.smartalarm.core.utils.AlarmSoundManager
 import com.anhq.smartalarm.features.alarm.NoGameAlarmActivity
 import com.anhq.smartalarm.features.game.AlarmGameActivity
+import com.anhq.smartalarm.core.database.model.AlarmSuggestionEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,17 +35,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.time.LocalTime
 import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
-import androidx.core.net.toUri
 
-@OptIn(ExperimentalMaterial3Api::class)
 @HiltViewModel
 class AddAlarmViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val alarmRepository: AlarmRepository,
-    private val alarmPreviewManager: AlarmPreviewManager
+    private val alarmPreviewManager: AlarmPreviewManager,
+    private val alarmSuggestionRepository: AlarmSuggestionRepository
 ) : ViewModel() {
 
     private val application = context.applicationContext as Application
@@ -63,19 +64,16 @@ class AddAlarmViewModel @Inject constructor(
     val alarmSounds: StateFlow<List<AlarmSound>> = _alarmSounds.asStateFlow()
     private val _selectedSound = MutableStateFlow<AlarmSound?>(null)
     val selectedSound: StateFlow<AlarmSound?> = _selectedSound.asStateFlow()
-    private val _timePickerState = MutableStateFlow(
-        TimePickerState(
-            initialHour = 0,
-            initialMinute = 0,
-            is24Hour = true
-        )
-    )
-    private val timePickerState: StateFlow<TimePickerState> = _timePickerState.asStateFlow()
+    private val _selectedTime = MutableStateFlow(LocalTime.now())
+    val selectedTime: StateFlow<LocalTime> = _selectedTime.asStateFlow()
     private val _gameType = MutableStateFlow(AlarmGameType.NONE)
     val gameType: StateFlow<AlarmGameType> = _gameType.asStateFlow()
 
     private val _permissionRequired = MutableLiveData(false)
     val permissionRequired: LiveData<Boolean> = _permissionRequired
+
+    private val _suggestions = MutableStateFlow<List<AlarmSuggestionEntity>>(emptyList())
+    val suggestions: StateFlow<List<AlarmSuggestionEntity>> = _suggestions.asStateFlow()
 
     init {
         loadSystemAlarmSounds()
@@ -104,8 +102,8 @@ class AddAlarmViewModel @Inject constructor(
         _label.value = label
     }
 
-    fun getTimePickerState(timePickerState: TimePickerState) {
-        _timePickerState.value = timePickerState
+    fun setSelectedTime(time: LocalTime) {
+        _selectedTime.value = time
     }
 
     fun setIsVibrate(isVibrate: Boolean) {
@@ -163,8 +161,8 @@ class AddAlarmViewModel @Inject constructor(
         Log.d(TAG, "Creating alarm with sound URI: $soundUri")
 
         return Alarm(
-            hour = timePickerState.value.hour,
-            minute = timePickerState.value.minute,
+            hour = selectedTime.value.hour,
+            minute = selectedTime.value.minute,
             isActive = isActive.value,
             isVibrate = isVibrate.value,
             selectedDays = selectedDays.value,
@@ -307,6 +305,37 @@ class AddAlarmViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         stopPreview()
+    }
+
+    fun loadSuggestionsForDay(dayOfWeek: DayOfWeek) {
+        viewModelScope.launch {
+            // Update suggestions first
+            alarmSuggestionRepository.updateSuggestions(dayOfWeek)
+            
+            // Then collect and filter suggestions
+            alarmSuggestionRepository.getSuggestionsForDay(dayOfWeek)
+                .collect { allSuggestions ->
+                    // If no repeat days selected (one-time alarm), filter suggestions
+                    val filteredSuggestions = if (selectedDays.value.isEmpty()) {
+                        val currentTime = LocalTime.now()
+                        allSuggestions.filter { suggestion ->
+                            val suggestionTime = LocalTime.of(suggestion.hour, suggestion.minute)
+                            suggestionTime.isAfter(currentTime)
+                        }
+                    } else {
+                        // For repeating alarms, show all suggestions
+                        allSuggestions
+                    }
+                    
+                    _suggestions.value = filteredSuggestions
+                }
+        }
+    }
+
+    fun onSuggestionSelected(suggestion: AlarmSuggestionEntity, wasAccepted: Boolean) {
+        viewModelScope.launch {
+            alarmSuggestionRepository.markSuggestionUsed(suggestion, wasAccepted)
+        }
     }
 
     companion object {

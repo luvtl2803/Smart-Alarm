@@ -28,7 +28,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,8 +37,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -55,6 +52,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -63,19 +61,19 @@ import com.anhq.smartalarm.R
 import com.anhq.smartalarm.core.designsystem.component.GameTypeSelector
 import com.anhq.smartalarm.core.designsystem.theme.Pure01
 import com.anhq.smartalarm.core.designsystem.theme.Pure02
-import com.anhq.smartalarm.core.designsystem.theme.SmartAlarmTheme
-import com.anhq.smartalarm.core.designsystem.theme.body4
-import com.anhq.smartalarm.core.designsystem.theme.body5
+import com.anhq.smartalarm.core.designsystem.theme.body2
 import com.anhq.smartalarm.core.designsystem.theme.gradient1
 import com.anhq.smartalarm.core.designsystem.theme.label1
-import com.anhq.smartalarm.core.designsystem.theme.label2
-import com.anhq.smartalarm.core.designsystem.theme.label3
+import com.anhq.smartalarm.core.designsystem.theme.title3
 import com.anhq.smartalarm.core.model.AlarmGameType
 import com.anhq.smartalarm.core.model.DayOfWeek
 import com.anhq.smartalarm.core.ui.InputTextDialog
 import com.anhq.smartalarm.core.utils.AlarmSound
+import com.commandiron.wheel_picker_compose.WheelTimePicker
+import com.commandiron.wheel_picker_compose.core.TimeFormat
+import com.commandiron.wheel_picker_compose.core.WheelPickerDefaults
+import java.time.LocalTime
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditAlarmRoute(
     onCancelClick: () -> Unit,
@@ -90,7 +88,7 @@ fun EditAlarmRoute(
     val gameType by viewModel.gameType.collectAsStateWithLifecycle()
     val alarmSounds by viewModel.alarmSounds.collectAsStateWithLifecycle()
     val selectedSound by viewModel.selectedSound.collectAsStateWithLifecycle()
-    val timePickerState by viewModel.timePickerState.collectAsStateWithLifecycle()
+    val selectedTime by viewModel.selectedTime.collectAsStateWithLifecycle()
 
     EditAlarmScreen(
         onCancelClick = onCancelClick,
@@ -104,7 +102,8 @@ fun EditAlarmRoute(
         },
         label = label,
         setLabel = { viewModel.setLabel(it) },
-        setTimePickerState = { viewModel.setTimePickerState(it) },
+        selectedTime = selectedTime,
+        setSelectedTime = { viewModel.setSelectedTime(it) },
         selectedDays = selectedDays,
         toggleDay = { viewModel.toggleDay(it) },
         isVibrate = isVibrate,
@@ -115,12 +114,9 @@ fun EditAlarmRoute(
         selectedSound = selectedSound,
         setAlarmSound = { viewModel.setAlarmSound(it) },
         previewAlarm = { viewModel.previewAlarm() },
-        stopPreview = { viewModel.stopPreview() },
-        timePickerState = timePickerState
+        stopPreview = { viewModel.stopPreview() }
     )
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditAlarmScreen(
     onCancelClick: () -> Unit,
@@ -129,7 +125,8 @@ fun EditAlarmScreen(
     setLabel: (String) -> Unit,
     selectedDays: Set<DayOfWeek>,
     toggleDay: (DayOfWeek) -> Unit,
-    setTimePickerState: (TimePickerState) -> Unit,
+    selectedTime: LocalTime,
+    setSelectedTime: (LocalTime) -> Unit,
     isVibrate: Boolean,
     setVibrate: () -> Unit,
     gameType: AlarmGameType,
@@ -138,8 +135,7 @@ fun EditAlarmScreen(
     selectedSound: AlarmSound?,
     setAlarmSound: (Uri) -> Unit,
     previewAlarm: () -> Intent?,
-    stopPreview: () -> Unit,
-    timePickerState: TimePickerState?
+    stopPreview: () -> Unit
 ) {
     var isEditName by remember { mutableStateOf(false) }
     var showSoundPicker by remember { mutableStateOf(false) }
@@ -188,19 +184,16 @@ fun EditAlarmScreen(
                     Text(
                         modifier = Modifier.clickable { onCancelClick() },
                         text = stringResource(R.string.cancel),
-                        style = MaterialTheme.typography.gradient1,
+                        style = gradient1,
                     )
                     Text(
                         text = stringResource(R.string.edit),
-                        style = MaterialTheme.typography.label1,
+                        style = title3,
                     )
                     Text(
-                        modifier = Modifier.clickable {
-                            timePickerState?.let { setTimePickerState(it) }
-                            onSaveClick()
-                        },
+                        modifier = Modifier.clickable { onSaveClick() },
                         text = stringResource(R.string.save),
-                        style = MaterialTheme.typography.gradient1,
+                        style = gradient1,
                     )
                 }
 
@@ -220,14 +213,13 @@ fun EditAlarmScreen(
                     ) {
                         // Alarm Name
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = label,
-                                style = MaterialTheme.typography.label2,
+                                style = title3,
                             )
                             IconButton(onClick = { isEditName = true }) {
                                 Icon(
@@ -238,10 +230,25 @@ fun EditAlarmScreen(
                         }
 
                         // Time Picker
-                        timePickerState?.let {
-                            TimeInput(
-                                state = it,
-                                modifier = Modifier.padding(top = 8.dp)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            WheelTimePicker(
+                                startTime = selectedTime,
+                                timeFormat = TimeFormat.HOUR_24,
+                                size = DpSize(300.dp, 150.dp),
+                                rowCount = 3,
+                                textStyle = MaterialTheme.typography.headlineMedium,
+                                textColor = MaterialTheme.colorScheme.onBackground,
+                                selectorProperties = WheelPickerDefaults.selectorProperties(
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                ),
+                                onSnappedTime = { time ->
+                                    setSelectedTime(time)
+                                }
                             )
                         }
                     }
@@ -266,7 +273,7 @@ fun EditAlarmScreen(
                             ) {
                                 Text(
                                     text = stringResource(R.string.repeat_days),
-                                    style = MaterialTheme.typography.label2,
+                                    style = title3,
                                     modifier = Modifier.padding(bottom = 20.dp)
                                 )
                                 RepeatAlarmButton(
@@ -309,11 +316,11 @@ fun EditAlarmScreen(
                                     Column {
                                         Text(
                                             text = stringResource(R.string.sound),
-                                            style = MaterialTheme.typography.label2
+                                            style = title3
                                         )
                                         Text(
                                             text = selectedSound?.title ?: "Mặc định",
-                                            style = MaterialTheme.typography.body4,
+                                            style = body2,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
@@ -333,7 +340,7 @@ fun EditAlarmScreen(
                                 ) {
                                     Text(
                                         text = "Rung",
-                                        style = MaterialTheme.typography.label2
+                                        style = title3
                                     )
                                     Switch(
                                         checked = isVibrate,
@@ -383,7 +390,7 @@ fun EditAlarmScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Xem trước báo thức",
-                                    style = MaterialTheme.typography.label2
+                                    style = title3
                                 )
                             }
                         }
@@ -418,7 +425,7 @@ fun EditAlarmScreen(
                             Text(
                                 modifier = Modifier.fillMaxWidth(),
                                 text = "Âm thanh báo thức",
-                                style = MaterialTheme.typography.label1,
+                                style = title3,
                                 textAlign = TextAlign.Center
                             )
                         },
@@ -444,7 +451,7 @@ fun EditAlarmScreen(
                                         )
                                         Text(
                                             "Chọn từ bộ nhớ",
-                                            style = MaterialTheme.typography.body4
+                                            style = body2
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(16.dp))
@@ -476,7 +483,7 @@ fun EditAlarmScreen(
                                                 ), contentDescription = "Selected"
                                             )
                                             Text(
-                                                sound.title, style = MaterialTheme.typography.body5
+                                                sound.title, style = body2
                                             )
                                         }
 
@@ -540,7 +547,7 @@ fun RepeatAlarmButton(
             ) {
                 Text(
                     text = day.label,
-                    style = MaterialTheme.typography.label3,
+                    style = label1,
                     color = Color.White
                 )
             }
@@ -548,19 +555,18 @@ fun RepeatAlarmButton(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
 fun EditAlarmScreenPreview() {
-    SmartAlarmTheme {
-        EditAlarmScreen(
+    EditAlarmScreen(
             onCancelClick = {},
             onSaveClick = {},
             label = "Morning Alarm",
             setLabel = {},
             selectedDays = setOf(DayOfWeek.MON, DayOfWeek.WED),
             toggleDay = {},
-            setTimePickerState = {},
+        selectedTime = LocalTime.of(7, 30),
+        setSelectedTime = {},
             isVibrate = true,
             setVibrate = {},
             gameType = AlarmGameType.MATH_PROBLEM,
@@ -572,12 +578,6 @@ fun EditAlarmScreenPreview() {
             selectedSound = AlarmSound(title = "Classic Ring", uri = "android.resource://com.anhq.smartalarm/raw/ring1".toUri()),
             setAlarmSound = {},
             previewAlarm = { null },
-            stopPreview = {},
-            timePickerState = TimePickerState(
-                initialHour = 7,
-                initialMinute = 30,
-                is24Hour = false
-            )
+        stopPreview = {}
         )
-    }
 }

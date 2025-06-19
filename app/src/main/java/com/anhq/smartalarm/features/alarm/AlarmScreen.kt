@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -40,16 +41,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.anhq.smartalarm.core.designsystem.theme.headline2
+import com.anhq.smartalarm.core.designsystem.theme.headline1
 import com.anhq.smartalarm.core.designsystem.theme.headline3
 import com.anhq.smartalarm.core.designsystem.theme.label1
-import com.anhq.smartalarm.core.designsystem.theme.label2
-import com.anhq.smartalarm.core.designsystem.theme.label3
+import com.anhq.smartalarm.core.designsystem.theme.title2
+import com.anhq.smartalarm.core.designsystem.theme.title3
 import com.anhq.smartalarm.core.model.Alarm
 import com.anhq.smartalarm.core.model.AlarmGameType
 import com.anhq.smartalarm.core.model.DayOfWeek
 import com.anhq.smartalarm.features.addalarm.navigation.navigateToAddAlarm
 import com.anhq.smartalarm.features.editalarm.navigation.navigateToEditAlarm
+import java.util.Locale
 
 @Composable
 fun AlarmRoute(
@@ -96,9 +98,10 @@ fun AlarmScreen(
         topBar = {
             Text(
                 text = "Báo thức",
-                style = MaterialTheme.typography.headline3,
+                style = headline3,
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(8.dp),
                 textAlign = TextAlign.Center
             )
         }
@@ -116,14 +119,14 @@ fun AlarmScreen(
                 ) {
                     Text(
                         text = "Chưa có báo thức nào",
-                        style = MaterialTheme.typography.label1,
+                        style = title2,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(
                         count = alarms.size,
@@ -174,8 +177,7 @@ fun AlarmScreen(
                 FloatingActionButton(
                     onClick = if (isSelectionMode) onDeleteSelected else onAddClick,
                     shape = RoundedCornerShape(50.dp),
-                    containerColor = if (isSelectionMode) Color.Red else Color.Black,
-                    contentColor = Color.White
+                    containerColor = if (isSelectionMode) Color.Red else FloatingActionButtonDefaults.containerColor,
                 ) {
                     Icon(
                         imageVector = if (isSelectionMode) Icons.Default.Delete else Icons.Default.Add,
@@ -206,11 +208,12 @@ fun AlarmItem(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(brush = gradient, shape = RoundedCornerShape(20.dp))
-            .padding(16.dp)
             .combinedClickable(
                 onClick = { onAlarmClick(alarm) },
                 onLongClick = { onAlarmLongClick(alarm) })
+            .background(brush = gradient, shape = RoundedCornerShape(20.dp))
+            .padding(16.dp)
+
     ) {
         Row(
             modifier = Modifier
@@ -220,23 +223,31 @@ fun AlarmItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
-                modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = alarm.label, style = MaterialTheme.typography.label1, color = Color.White
+                    text = alarm.label, style = title2, color = Color.White
                 )
 
                 Text(
-                    text = String.format("%02d:%02d", alarm.hour, alarm.minute),
-                    style = MaterialTheme.typography.headline2,
+                    text = String.format(Locale.US, "%02d:%02d", alarm.hour, alarm.minute),
+                    style = headline1,
                     color = Color.White
                 )
 
-                Text(
-                    text = alarm.getRepeatDaysString(),
-                    style = MaterialTheme.typography.label2,
-                    color = Color.White
-                )
+                if (alarm.selectedDays.isNotEmpty()) {
+                    Text(
+                        text = alarm.getRepeatDaysString(),
+                        style = title3,
+                        color = Color.White
+                    )
+                } else {
+                    Text(
+                        text = "Một lần",
+                        style = title3,
+                        color = Color.White
+                    )
+                }
             }
 
             Column(
@@ -270,13 +281,13 @@ fun AlarmItem(
                 if (alarm.isActive) {
                     Text(
                         text = alarm.getCountdownTime(System.currentTimeMillis()),
-                        style = MaterialTheme.typography.label3,
+                        style = label1,
                         color = Color.White.copy(alpha = 0.7f)
                     )
                 } else {
                     Text(
                         text = "Đang tắt",
-                        style = MaterialTheme.typography.label3,
+                        style = label1,
                         color = Color.White.copy(alpha = 0.7f)
                     )
                 }

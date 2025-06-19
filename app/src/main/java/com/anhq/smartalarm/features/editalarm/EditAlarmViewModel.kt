@@ -9,8 +9,6 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TimePickerState
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -34,10 +32,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import java.time.LocalTime
 import java.util.Calendar
 import javax.inject.Inject
 
-@OptIn(ExperimentalMaterial3Api::class)
 @HiltViewModel
 class EditAlarmViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -55,8 +53,8 @@ class EditAlarmViewModel @Inject constructor(
     private val _alarm = MutableStateFlow<Alarm?>(null)
     val alarm: StateFlow<Alarm?> = _alarm.asStateFlow()
 
-    private val _timePickerState = MutableStateFlow<TimePickerState?>(null)
-    val timePickerState: StateFlow<TimePickerState?> = _timePickerState.asStateFlow()
+    private val _selectedTime = MutableStateFlow<LocalTime>(LocalTime.now())
+    val selectedTime: StateFlow<LocalTime> = _selectedTime.asStateFlow()
 
     private val _selectedDays = MutableStateFlow<Set<DayOfWeek>>(emptySet())
     val selectedDays: StateFlow<Set<DayOfWeek>> = _selectedDays.asStateFlow()
@@ -95,11 +93,7 @@ class EditAlarmViewModel @Inject constructor(
                 _isVibrate.value = it.isVibrate
                 _gameType.value = it.gameType
                 _selectedSound.value = AlarmSound(it.soundUri.toUri(), getTitleFromUri(it.soundUri.toUri()))
-                _timePickerState.value = TimePickerState(
-                    initialHour = it.hour,
-                    initialMinute = it.minute,
-                    is24Hour = true
-                )
+                _selectedTime.value = LocalTime.of(it.hour, it.minute)
             }
         }
     }
@@ -121,8 +115,8 @@ class EditAlarmViewModel @Inject constructor(
         return alarmSoundManager.getAlarmTitleFromUri(uri)
     }
 
-    fun setTimePickerState(state: TimePickerState) {
-        _timePickerState.value = state
+    fun setSelectedTime(time: LocalTime) {
+        _selectedTime.value = time
     }
 
     fun toggleDay(day: DayOfWeek) {
@@ -184,8 +178,8 @@ class EditAlarmViewModel @Inject constructor(
             }
 
             val updatedAlarm = currentAlarm.copy(
-                hour = timePickerState.value?.hour ?: currentAlarm.hour,
-                minute = timePickerState.value?.minute ?: currentAlarm.minute,
+                hour = selectedTime.value.hour,
+                minute = selectedTime.value.minute,
                 selectedDays = _selectedDays.value,
                 label = _label.value,
                 isVibrate = _isVibrate.value,

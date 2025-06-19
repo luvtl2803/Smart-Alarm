@@ -51,16 +51,12 @@ class TimerStopReceiver : BroadcastReceiver() {
                         // Reset timer to initial time and pause it
                         timerRepository.updateTimer(
                             timer.copy(
-                                isRunning = true,
+                                isRunning = false,
                                 isPaused = true,
                                 remainingTimeMillis = timer.currentInitialTimeMillis,
                                 lastTickTime = System.currentTimeMillis()
                             )
                         )
-                        
-                        // Start service to show paused notification
-                        val serviceIntent = Intent(context, TimerService::class.java)
-                        context.startService(serviceIntent)
                     }
                 }
             }

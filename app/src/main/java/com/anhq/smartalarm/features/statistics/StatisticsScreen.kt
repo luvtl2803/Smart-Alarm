@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CardElevation
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.MaterialTheme
@@ -31,8 +34,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.anhq.smartalarm.core.data.repository.SleepData
+import com.anhq.smartalarm.core.data.repository.EnhancedSleepData
 import com.anhq.smartalarm.core.designsystem.theme.headline3
+import com.anhq.smartalarm.core.designsystem.theme.body2
+import com.anhq.smartalarm.core.designsystem.theme.title2
+import com.anhq.smartalarm.core.designsystem.theme.title3
+import com.anhq.smartalarm.core.designsystem.theme.label1
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
@@ -54,7 +61,9 @@ fun StatisticsRoute(
         },
         formatDuration = viewModel::formatDuration,
         formatDate = viewModel::formatDate,
-        formatTime = viewModel::formatTime
+        formatDayOfWeek = viewModel::formatDayOfWeek,
+        formatTime = viewModel::formatTime,
+        formatActionInfo = viewModel::formatActionInfo
     )
 }
 
@@ -63,20 +72,20 @@ fun StatisticsScreen(
     uiState: StatisticsUiState,
     onRequestPermission: () -> Unit,
     formatDuration: (Long) -> String,
-    formatDate: (SleepData) -> String,
-    formatTime: (SleepData) -> String
+    formatDate: (EnhancedSleepData) -> String,
+    formatDayOfWeek: (EnhancedSleepData) -> String,
+    formatTime: (EnhancedSleepData) -> String,
+    formatActionInfo: (EnhancedSleepData) -> String
 ) {
     Scaffold(
-        modifier = Modifier.padding(
-            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        ),
+        modifier = Modifier.padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
         topBar = {
             Text(
                 text = "Thống kê giấc ngủ",
-                style = MaterialTheme.typography.headline3,
+                style = headline3,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(8.dp),
                 textAlign = TextAlign.Center
             )
         }
@@ -101,13 +110,37 @@ fun StatisticsScreen(
                     ) {
                         Text(
                             text = "Cần quyền truy cập dữ liệu giấc ngủ",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = title2,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         ElevatedButton(onClick = onRequestPermission) {
-                            Text("Cấp quyền")
+                            Text(
+                                text = "Cấp quyền",
+                                style = label1
+                            )
                         }
+                    }
+                }
+
+                uiState.error != null -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Đã xảy ra lỗi",
+                            style = title2,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = uiState.error,
+                            style = body2,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
 
@@ -118,13 +151,13 @@ fun StatisticsScreen(
                     ) {
                         Text(
                             text = "Không có dữ liệu giấc ngủ",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = title2,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Hãy kết nối với ứng dụng theo dõi giấc ngủ",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = body2,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
@@ -134,7 +167,7 @@ fun StatisticsScreen(
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Thống kê tổng quan
                         item {
@@ -147,13 +180,13 @@ fun StatisticsScreen(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp)
+                                        .padding(horizontal = 8.dp)
                                 ) {
                                     Text(
                                         text = "Tổng quan",
-                                        style = MaterialTheme.typography.titleMedium
+                                        style = title3
                                     )
-                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Spacer(modifier = Modifier.height(12.dp))
 
                                     val avgDuration = uiState.sleepData
                                         .map { it.durationMinutes }
@@ -167,24 +200,24 @@ fun StatisticsScreen(
                                         Column {
                                             Text(
                                                 text = formatDuration(avgDuration),
-                                                style = MaterialTheme.typography.titleLarge,
+                                                style = title2,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
                                             Text(
                                                 text = "Trung bình",
-                                                style = MaterialTheme.typography.bodyMedium,
+                                                style = body2,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                         Column(horizontalAlignment = Alignment.End) {
                                             Text(
                                                 text = "${uiState.sleepData.size} ngày",
-                                                style = MaterialTheme.typography.titleLarge,
+                                                style = title2,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
                                             Text(
                                                 text = "Đã ghi nhận",
-                                                style = MaterialTheme.typography.bodyMedium,
+                                                style = body2,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
@@ -210,11 +243,24 @@ fun StatisticsScreen(
                                     Chart(
                                         chart = lineChart(),
                                         model = entryModelOf(entries),
-                                        startAxis = rememberStartAxis(),
-                                        bottomAxis = rememberBottomAxis(),
+                                        startAxis = rememberStartAxis(
+                                            title = "Giờ",
+                                            tickLength = 0.dp
+                                        ),
+                                        bottomAxis = rememberBottomAxis(
+                                            title = "Ngày",
+                                            tickLength = 0.dp,
+                                            valueFormatter = { value, _ ->
+                                                uiState.sleepData
+                                                    .takeLast(7)
+                                                    .getOrNull(value.toInt())
+                                                    ?.let { formatDate(it) }
+                                                    ?: ""
+                                            }
+                                        ),
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(200.dp)
+                                            .wrapContentHeight()
                                     )
                                 }
                             )
@@ -223,35 +269,55 @@ fun StatisticsScreen(
                         // Chi tiết từng ngày
                         items(uiState.sleepData.reversed()) { data ->
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().padding(4.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 2.dp
                                 )
                             ) {
                                 Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
+                                        .fillMaxWidth().padding(4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(
-                                            text = formatDate(data),
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
+                                        Column (
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = formatDate(data),
+                                                style = title3
+                                            )
+                                            Text(
+                                                text = formatDayOfWeek(data),
+                                                style = body2,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                         Text(
                                             text = formatDuration(data.durationMinutes),
-                                            style = MaterialTheme.typography.titleMedium,
+                                            style = title3,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = formatTime(data),
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = body2,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    // Thêm thông tin về báo thức và hành động
+                                    Text(
+                                        text = formatActionInfo(data),
+                                        style = body2,
+                                        color = if (data.userAction == "SNOOZED")
+                                            MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -284,16 +350,16 @@ fun StatCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(8.dp)
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Box(
                 modifier = Modifier
                     .fillMaxSize(),

@@ -9,9 +9,16 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
+import com.anhq.smartalarm.core.data.repository.AlarmHistoryRepository
+import com.anhq.smartalarm.core.data.repository.AlarmRepository
+import com.anhq.smartalarm.core.data.repository.AlarmSuggestionRepository
+import com.anhq.smartalarm.core.model.DayOfWeek
 import com.anhq.smartalarm.core.sharereference.PreferenceHelper
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 import javax.inject.Inject
@@ -23,6 +30,15 @@ import javax.inject.Inject
 class SnoozeReceiver : BroadcastReceiver() {
     @Inject
     lateinit var preferenceHelper: PreferenceHelper
+    
+    @Inject
+    lateinit var alarmHistoryRepository: AlarmHistoryRepository
+
+    @Inject
+    lateinit var alarmRepository: AlarmRepository
+
+    @Inject
+    lateinit var alarmSuggestionRepository: AlarmSuggestionRepository
 
     companion object {
         private const val TAG = "SnoozeReceiver"
@@ -31,6 +47,8 @@ class SnoozeReceiver : BroadcastReceiver() {
     @SuppressLint("MissingPermission")
     override fun onReceive(context: Context, intent: Intent) {
         val alarmId = intent.getIntExtra("alarm_id", -1)
+        val triggeredAt = intent.getLongExtra("triggered_at", System.currentTimeMillis())
+        
         if (alarmId == -1) return
 
         // Stop current alarm sound and vibration
@@ -52,6 +70,43 @@ class SnoozeReceiver : BroadcastReceiver() {
             val notificationManager = NotificationManagerCompat.from(context)
             notificationManager.cancel(alarmId)
             return
+        }
+
+        // Record alarm history and update suggestions
+        CoroutineScope(Dispatchers.IO).launch {
+            // Record alarm history
+            alarmHistoryRepository.recordAlarmHistory(
+                alarmId = alarmId,
+                userAction = "SNOOZED",
+                triggeredAt = triggeredAt
+            )
+
+            // Update suggestions based on alarm type
+            val alarm = alarmRepository.getAlarmById(alarmId).first()
+            alarm?.let {
+                if (it.selectedDays.isNotEmpty()) {
+                    // Update suggestions for each day if repeating alarm
+                    it.selectedDays.forEach { day ->
+                        alarmSuggestionRepository.updateSuggestions(day)
+                    }
+                } else {
+                    // For non-repeating alarm, update suggestions for the current day
+                    val calendar = Calendar.getInstance()
+                    val calendarDay = calendar.get(Calendar.DAY_OF_WEEK)
+                    // Convert from Calendar.DAY_OF_WEEK to our DayOfWeek enum
+                    val dayOfWeek = when (calendarDay) {
+                        Calendar.MONDAY -> DayOfWeek.MON
+                        Calendar.TUESDAY -> DayOfWeek.TUE
+                        Calendar.WEDNESDAY -> DayOfWeek.WED
+                        Calendar.THURSDAY -> DayOfWeek.THU
+                        Calendar.FRIDAY -> DayOfWeek.FRI
+                        Calendar.SATURDAY -> DayOfWeek.SAT
+                        Calendar.SUNDAY -> DayOfWeek.SUN
+                        else -> DayOfWeek.MON // Fallback to Monday
+                    }
+                    alarmSuggestionRepository.updateSuggestions(dayOfWeek)
+                }
+            }
         }
 
         // Schedule next alarm

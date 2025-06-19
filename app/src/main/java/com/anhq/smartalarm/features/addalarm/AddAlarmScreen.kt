@@ -5,8 +5,12 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,28 +26,28 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePickerState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -57,28 +61,30 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anhq.smartalarm.R
+import com.anhq.smartalarm.core.database.model.AlarmSuggestionEntity
 import com.anhq.smartalarm.core.designsystem.component.GameTypeSelector
 import com.anhq.smartalarm.core.designsystem.theme.Pure01
 import com.anhq.smartalarm.core.designsystem.theme.Pure02
-import com.anhq.smartalarm.core.designsystem.theme.SmartAlarmTheme
-import com.anhq.smartalarm.core.designsystem.theme.body4
-import com.anhq.smartalarm.core.designsystem.theme.body5
+import com.anhq.smartalarm.core.designsystem.theme.body2
 import com.anhq.smartalarm.core.designsystem.theme.gradient1
 import com.anhq.smartalarm.core.designsystem.theme.label1
-import com.anhq.smartalarm.core.designsystem.theme.label2
-import com.anhq.smartalarm.core.designsystem.theme.label3
+import com.anhq.smartalarm.core.designsystem.theme.title3
 import com.anhq.smartalarm.core.model.AlarmGameType
 import com.anhq.smartalarm.core.model.DayOfWeek
 import com.anhq.smartalarm.core.ui.InputTextDialog
 import com.anhq.smartalarm.core.utils.AlarmSound
+import com.commandiron.wheel_picker_compose.WheelTimePicker
+import com.commandiron.wheel_picker_compose.core.TimeFormat
+import com.commandiron.wheel_picker_compose.core.WheelPickerDefaults
+import java.time.LocalTime
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddAlarmRoute(
     onCancelClick: () -> Unit,
@@ -94,6 +100,34 @@ fun AddAlarmRoute(
     val gameType by viewModel.gameType.collectAsStateWithLifecycle()
     val alarmSounds by viewModel.alarmSounds.collectAsStateWithLifecycle()
     val selectedSound by viewModel.selectedSound.collectAsStateWithLifecycle()
+    val selectedTime by viewModel.selectedTime.collectAsStateWithLifecycle()
+    val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
+
+    // Load suggestions based on selected days
+    LaunchedEffect(selectedDays) {
+        if (selectedDays.isEmpty()) {
+            // If no day selected, show suggestions for current day
+            val calendar = Calendar.getInstance()
+            val calendarDay = calendar.get(Calendar.DAY_OF_WEEK)
+            // Convert from Calendar.DAY_OF_WEEK to our DayOfWeek enum
+            val currentDay = when (calendarDay) {
+                Calendar.MONDAY -> DayOfWeek.MON
+                Calendar.TUESDAY -> DayOfWeek.TUE
+                Calendar.WEDNESDAY -> DayOfWeek.WED
+                Calendar.THURSDAY -> DayOfWeek.THU
+                Calendar.FRIDAY -> DayOfWeek.FRI
+                Calendar.SATURDAY -> DayOfWeek.SAT
+                Calendar.SUNDAY -> DayOfWeek.SUN
+                else -> DayOfWeek.MON // Fallback to Monday
+            }
+            viewModel.loadSuggestionsForDay(currentDay)
+        } else {
+            // Load suggestions for all selected days
+            selectedDays.forEach { day ->
+                viewModel.loadSuggestionsForDay(day)
+            }
+        }
+    }
 
     AddAlarmScreen(
         onCancelClick = onCancelClick,
@@ -109,7 +143,8 @@ fun AddAlarmRoute(
         },
         label = label,
         setLabel = { viewModel.setLabel(it) },
-        setTimePickerState = { viewModel.getTimePickerState(it) },
+        selectedTime = selectedTime,
+        setSelectedTime = { viewModel.setSelectedTime(it) },
         selectedDays = selectedDays,
         toggleDay = { viewModel.toggleDay(it) },
         isVibrate = isVibrate,
@@ -120,10 +155,18 @@ fun AddAlarmRoute(
         selectedSound = selectedSound,
         setAlarmSound = { viewModel.setAlarmSound(it) },
         previewAlarm = { viewModel.previewAlarm() },
-        stopPreview = { viewModel.stopPreview() })
+        stopPreview = { viewModel.stopPreview() },
+        suggestions = suggestions,
+        onSuggestionSelected = { suggestion, accepted ->
+            // Đảm bảo cập nhật thời gian trước
+            val newTime = LocalTime.of(suggestion.hour, suggestion.minute)
+            viewModel.setSelectedTime(newTime)
+            // Sau đó mới đánh dấu suggestion đã được chấp nhận
+            viewModel.onSuggestionSelected(suggestion, accepted)
+        }
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddAlarmScreen(
     onCancelClick: () -> Unit,
@@ -132,7 +175,8 @@ fun AddAlarmScreen(
     setLabel: (String) -> Unit,
     selectedDays: Set<DayOfWeek>,
     toggleDay: (DayOfWeek) -> Unit,
-    setTimePickerState: (TimePickerState) -> Unit,
+    selectedTime: LocalTime,
+    setSelectedTime: (LocalTime) -> Unit,
     isVibrate: Boolean,
     setVibrate: () -> Unit,
     gameType: AlarmGameType,
@@ -141,34 +185,30 @@ fun AddAlarmScreen(
     selectedSound: AlarmSound?,
     setAlarmSound: (Uri) -> Unit,
     previewAlarm: () -> Intent?,
-    stopPreview: () -> Unit
+    stopPreview: () -> Unit,
+    suggestions: List<AlarmSuggestionEntity>,
+    onSuggestionSelected: (AlarmSuggestionEntity, Boolean) -> Unit
 ) {
     var isEditName by remember { mutableStateOf(false) }
     var showSoundPicker by remember { mutableStateOf(false) }
     var isPreviewing by remember { mutableStateOf(false) }
-    val currentTime = Calendar.getInstance()
-    val timePickerState = rememberTimePickerState(
-        initialHour = currentTime.get(Calendar.HOUR_OF_DAY),
-        initialMinute = currentTime.get(Calendar.MINUTE),
-        is24Hour = true,
-    )
 
-        // Activity result launcher for game preview
-        val gameLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            if (result.resultCode == Activity.RESULT_OK || result.resultCode == Activity.RESULT_CANCELED) {
-                isPreviewing = false
-            }
+    // Activity result launcher for game preview
+    val gameLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK || result.resultCode == Activity.RESULT_CANCELED) {
+            isPreviewing = false
         }
+    }
 
-        val fileLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.GetContent()
-        ) { uri: Uri? ->
-            uri?.let {
-                setAlarmSound(it)
-            }
+    val fileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            setAlarmSound(it)
         }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -195,19 +235,16 @@ fun AddAlarmScreen(
                     Text(
                         modifier = Modifier.clickable { onCancelClick() },
                         text = stringResource(R.string.cancel),
-                        style = MaterialTheme.typography.gradient1,
+                        style = gradient1,
                     )
                     Text(
                         text = stringResource(R.string.add),
-                        style = MaterialTheme.typography.label1,
+                        style = title3,
                     )
                     Text(
-                        modifier = Modifier.clickable {
-                            setTimePickerState(timePickerState)
-                            onAddClick()
-                        },
+                        modifier = Modifier.clickable { onAddClick() },
                         text = stringResource(R.string.save),
-                        style = MaterialTheme.typography.gradient1,
+                        style = gradient1,
                     )
                 }
 
@@ -233,7 +270,7 @@ fun AddAlarmScreen(
                         ) {
                             Text(
                                 text = label,
-                                style = MaterialTheme.typography.label2,
+                                style = title3,
                             )
                             IconButton(onClick = { isEditName = true }) {
                                 Icon(
@@ -244,11 +281,85 @@ fun AddAlarmScreen(
                         }
 
                         // Time Picker
-                        TimeInput(
-                            state = timePickerState, modifier = Modifier.padding(top = 8.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            key (selectedTime) {
+                                WheelTimePicker(
+                                    startTime = selectedTime,
+                                    timeFormat = TimeFormat.HOUR_24,
+                                    size = DpSize(300.dp, 150.dp),
+                                    rowCount = 3,
+                                    textStyle = MaterialTheme.typography.headlineMedium,
+                                    textColor = MaterialTheme.colorScheme.onBackground,
+                                    selectorProperties = WheelPickerDefaults.selectorProperties(
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(
+                                            alpha = 0.3f
+                                        )
+                                    ),
+                                    onSnappedTime = { time ->
+                                        setSelectedTime(time)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
+                AnimatedVisibility(suggestions.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.suggested_times),
+                                style = title3,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                suggestions.forEach { suggestion ->
+                                    SuggestionChip(
+                                        onClick = {
+                                            // Đảm bảo cập nhật thời gian trước
+                                            val newTime =
+                                                LocalTime.of(suggestion.hour, suggestion.minute)
+                                            setSelectedTime(newTime)
+                                            // Sau đó mới đánh dấu suggestion đã được chấp nhận
+                                            onSuggestionSelected(suggestion, true)
+                                        },
+                                        label = {
+                                            Text(
+                                                text = stringResource(
+                                                    R.string.alarm_suggestion_format,
+                                                    suggestion.hour,
+                                                    suggestion.minute,
+                                                    suggestion.dayOfWeek.toString()
+                                                ),
+                                                style = body2
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                    }
+                }
+                    }
 
                 // Settings Section
                 LazyColumn(
@@ -268,7 +379,7 @@ fun AddAlarmScreen(
                             ) {
                                 Text(
                                     text = stringResource(R.string.repeat_days),
-                                    style = MaterialTheme.typography.label2,
+                                    style = title3,
                                     modifier = Modifier.padding(bottom = 20.dp)
                                 )
                                 RepeatAlarmButton(
@@ -308,11 +419,11 @@ fun AddAlarmScreen(
                                 ) {
                                     Column {
                                         Text(
-                                            text = stringResource(R.string.sound), style = MaterialTheme.typography.label2
+                                            text = stringResource(R.string.sound), style = title3
                                         )
                                         Text(
                                             text = selectedSound?.title ?: "Mặc định",
-                                            style = MaterialTheme.typography.body4,
+                                            style = body2,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
@@ -331,7 +442,7 @@ fun AddAlarmScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Rung", style = MaterialTheme.typography.label2
+                                        text = "Rung", style = title3
                                     )
                                     Switch(
                                         checked = isVibrate,
@@ -381,7 +492,7 @@ fun AddAlarmScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Xem trước báo thức",
-                                    style = MaterialTheme.typography.label2
+                                    style = title3
                                 )
                             }
                         }
@@ -413,13 +524,13 @@ fun AddAlarmScreen(
                     AlertDialog(
                         modifier = Modifier.height(500.dp),
                         onDismissRequest = { showSoundPicker = false }, title = {
-                        Text(
-                            modifier = Modifier.fillMaxWidth(),
-                            text = "Âm thanh báo thức",
-                            style = MaterialTheme.typography.label1,
-                            textAlign = TextAlign.Center
-                        )
-                    },
+                            Text(
+                                modifier = Modifier.fillMaxWidth(),
+                                text = "Âm thanh báo thức",
+                                style = title3,
+                                textAlign = TextAlign.Center
+                            )
+                        },
                         text = {
                             LazyColumn {
 
@@ -442,7 +553,7 @@ fun AddAlarmScreen(
                                         )
                                         Text(
                                             "Chọn từ bộ nhớ",
-                                            style = MaterialTheme.typography.body4
+                                            style = body2
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(16.dp))
@@ -474,7 +585,7 @@ fun AddAlarmScreen(
                                                 ), contentDescription = "Selected"
                                             )
                                             Text(
-                                                sound.title, style = MaterialTheme.typography.body5
+                                                sound.title, style = body2
                                             )
                                         }
 
@@ -536,7 +647,7 @@ fun RepeatAlarmButton(
             ) {
                 Text(
                     text = day.label,
-                    style = MaterialTheme.typography.label3,
+                    style = label1,
                     color = Color.White
                 )
             }
@@ -544,33 +655,57 @@ fun RepeatAlarmButton(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true)
+@Preview
 @Composable
 fun AddAlarmScreenPreview() {
-
-    SmartAlarmTheme {
-        AddAlarmScreen(
-            onCancelClick = { /* No-op for preview */ },
-            onAddClick = { /* No-op for preview */ },
-            label = "Báo thức ",
-            setLabel = { /* No-op for preview */ },
-            setTimePickerState = { /* No-op for preview */ },
-            selectedDays = setOf(DayOfWeek.MON, DayOfWeek.WED, DayOfWeek.FRI),
-            toggleDay = { /* No-op for preview */ },
-            isVibrate = true,
-            setVibrate = { /* No-op for preview */ },
-            gameType = AlarmGameType.MATH_PROBLEM,
-            setGameType = { /* No-op for preview */ },
-            alarmSounds = listOf(
-                AlarmSound(uri = "content://media/alarm1".toUri(), title = "Alarm 1"),
-                AlarmSound(uri = "content://media/alarm2".toUri(), title = "Alarm 2"),
-                AlarmSound(uri = "content://media/alarm3".toUri(), title = "Alarm 3")
-            ),
-            selectedSound = AlarmSound(uri = "content://media/alarm1".toUri(), title = "Alarm 1"),
-            setAlarmSound = { /* No-op for preview */ },
-            previewAlarm = { null }, // Trả về null vì không cần Intent trong preview
-            stopPreview = { /* No-op for preview */ }
+    val suggestions = listOf(
+        AlarmSuggestionEntity(
+            id = 1,
+            hour = 7,
+            minute = 30,
+            dayOfWeek = DayOfWeek.MON,
+            confidence = 0.85f,
+            lastUpdated = System.currentTimeMillis(),
+            suggestedCount = 5,
+            acceptedCount = 4
+        ),
+        AlarmSuggestionEntity(
+            id = 2,
+            hour = 8,
+            minute = 0,
+            dayOfWeek = DayOfWeek.MON,
+            confidence = 0.75f,
+            lastUpdated = System.currentTimeMillis(),
+            suggestedCount = 3,
+            acceptedCount = 2
         )
-    }
+    )
+    AddAlarmScreen(
+        onCancelClick = { },
+        onAddClick = { },
+        label = "Báo thức buổi sáng",
+        selectedTime = LocalTime.of(7, 30),
+        setSelectedTime = { },
+        setLabel = { },
+        toggleDay = { },
+        setVibrate = { },
+        setGameType = { },
+            selectedDays = setOf(DayOfWeek.MON, DayOfWeek.WED, DayOfWeek.FRI),
+            gameType = AlarmGameType.MATH_PROBLEM,
+        isVibrate = true,
+            alarmSounds = listOf(
+                AlarmSound(uri = "".toUri(), title = "Im lặng"),
+                AlarmSound(uri = "content://media/alarm1".toUri(), title = "Báo thức 1"),
+                AlarmSound(uri = "content://media/alarm2".toUri(), title = "Báo thức 2")
+            ),
+        selectedSound = AlarmSound(
+            uri = "content://media/alarm1".toUri(),
+            title = "Báo thức 1"
+        ),
+        setAlarmSound = { },
+        previewAlarm = { null },
+        stopPreview = { },
+        suggestions = suggestions,
+        onSuggestionSelected = { _, _ -> }
+        )
 }

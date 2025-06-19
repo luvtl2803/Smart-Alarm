@@ -19,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -91,7 +92,7 @@ class TimerService : Service() {
                         }
                     } ?: 0
 
-                    if (remainingTime > 0 && shouldUpdateNotification(runningTimers.size, remainingTime)) {
+                    if (remainingTime > 0 && shouldUpdateNotification(runningTimers.size)) {
                         val notification = buildNotification(
                             runningTimers.size,
                             remainingTime,
@@ -195,8 +196,7 @@ class TimerService : Service() {
     }
 
     private fun shouldUpdateNotification(
-        currentRunningCount: Int,
-        currentRemainingTime: Long
+        currentRunningCount: Int
     ): Boolean {
         val currentTime = System.currentTimeMillis()
 
@@ -331,6 +331,6 @@ class TimerService : Service() {
         val hours = millis / (1000 * 60 * 60)
         val minutes = (millis % (1000 * 60 * 60)) / (1000 * 60)
         val seconds = (millis % (1000 * 60)) / 1000
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+        return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
     }
 } 

@@ -155,7 +155,7 @@ fun NoGameAlarmScreen(
                     containerColor = MaterialTheme.colorScheme.secondary
                 )
                 ) {
-                Text("Tạm hoãn", style = MaterialTheme.typography.label2)
+                    Text("Tạm hoãn", style = label2)
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -169,7 +169,7 @@ fun NoGameAlarmScreen(
                     containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                Text("Dừng", style = MaterialTheme.typography.label2)
+                    Text("Dừng", style = label2)
             }
         }
     }
