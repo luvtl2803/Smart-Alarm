@@ -27,7 +27,7 @@ class AlarmGameActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Set window flags before calling setContent
+        @Suppress("DEPRECATION")
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                     WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
@@ -44,15 +44,15 @@ class AlarmGameActivity : ComponentActivity() {
             keyguardManager.requestDismissKeyguard(this, null)
         }
 
-        // Acquire wake lock
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = powerManager.newWakeLock(
-            PowerManager.FULL_WAKE_LOCK or
+            @Suppress("DEPRECATION")
+            PowerManager.FULL_WAKE_LOCK or @Suppress("DEPRECATION")
                     PowerManager.ACQUIRE_CAUSES_WAKEUP or
                     PowerManager.ON_AFTER_RELEASE,
             "SmartAlarm:AlarmWakeLock"
         )
-        wakeLock.acquire(10 * 60 * 1000L) // 10 minutes
+        wakeLock.acquire(10 * 60 * 1000L)
 
         setContent {
             SmartAlarmTheme {

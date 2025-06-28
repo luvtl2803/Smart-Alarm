@@ -6,8 +6,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -84,6 +82,7 @@ import com.commandiron.wheel_picker_compose.core.TimeFormat
 import com.commandiron.wheel_picker_compose.core.WheelPickerDefaults
 import java.time.LocalTime
 import java.util.Calendar
+import java.util.Locale
 
 @Composable
 fun AddAlarmRoute(
@@ -102,14 +101,110 @@ fun AddAlarmRoute(
     val selectedSound by viewModel.selectedSound.collectAsStateWithLifecycle()
     val selectedTime by viewModel.selectedTime.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
+    val duplicateAlarm by viewModel.showDuplicateDialog.collectAsStateWithLifecycle()
 
-    // Load suggestions based on selected days
+    duplicateAlarm?.let { alarm ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDuplicateDialog() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(28.dp)),
+            title = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_stop),
+                        contentDescription = "Warning",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .padding(bottom = 16.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = "Báo thức đã tồn tại",
+                        style = title3,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = String.format(
+                            Locale.US,
+                            "%02d:%02d",
+                            alarm.hour,
+                            alarm.minute
+                        ),
+                        style = MaterialTheme.typography.displayMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Text(
+                        text = if (alarm.selectedDays.isEmpty()) {
+                            "Báo thức một lần đã được đặt vào thời gian này"
+                        } else {
+                            "Báo thức lặp lại đã được đặt vào các ngày: ${alarm.selectedDays.joinToString(", ") { it.label }}"
+                        },
+                        style = body2,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Text(
+                        text = "Bạn có muốn ghi đè lên báo thức này không?",
+                        style = body2,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.overwriteAlarm(onSuccess = onAddClick) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        text = "Ghi đè",
+                        style = title3
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.dismissDuplicateDialog() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        text = "Hủy",
+                        style = title3,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        )
+    }
+
     LaunchedEffect(selectedDays) {
         if (selectedDays.isEmpty()) {
-            // If no day selected, show suggestions for current day
             val calendar = Calendar.getInstance()
             val calendarDay = calendar.get(Calendar.DAY_OF_WEEK)
-            // Convert from Calendar.DAY_OF_WEEK to our DayOfWeek enum
             val currentDay = when (calendarDay) {
                 Calendar.MONDAY -> DayOfWeek.MON
                 Calendar.TUESDAY -> DayOfWeek.TUE
@@ -118,11 +213,10 @@ fun AddAlarmRoute(
                 Calendar.FRIDAY -> DayOfWeek.FRI
                 Calendar.SATURDAY -> DayOfWeek.SAT
                 Calendar.SUNDAY -> DayOfWeek.SUN
-                else -> DayOfWeek.MON // Fallback to Monday
+                else -> DayOfWeek.MON
             }
             viewModel.loadSuggestionsForDay(currentDay)
         } else {
-            // Load suggestions for all selected days
             selectedDays.forEach { day ->
                 viewModel.loadSuggestionsForDay(day)
             }
@@ -137,8 +231,7 @@ fun AddAlarmRoute(
                     context.startActivity(intent)
                 }
             } else {
-                viewModel.saveAlarm()
-                onAddClick()
+                viewModel.saveAlarm(onSuccess = onAddClick)
             }
         },
         label = label,
@@ -158,10 +251,8 @@ fun AddAlarmRoute(
         stopPreview = { viewModel.stopPreview() },
         suggestions = suggestions,
         onSuggestionSelected = { suggestion, accepted ->
-            // Đảm bảo cập nhật thời gian trước
             val newTime = LocalTime.of(suggestion.hour, suggestion.minute)
             viewModel.setSelectedTime(newTime)
-            // Sau đó mới đánh dấu suggestion đã được chấp nhận
             viewModel.onSuggestionSelected(suggestion, accepted)
         }
     )
@@ -193,7 +284,6 @@ fun AddAlarmScreen(
     var showSoundPicker by remember { mutableStateOf(false) }
     var isPreviewing by remember { mutableStateOf(false) }
 
-    // Activity result launcher for game preview
     val gameLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -336,11 +426,9 @@ fun AddAlarmScreen(
                                 suggestions.forEach { suggestion ->
                                     SuggestionChip(
                                         onClick = {
-                                            // Đảm bảo cập nhật thời gian trước
                                             val newTime =
                                                 LocalTime.of(suggestion.hour, suggestion.minute)
                                             setSelectedTime(newTime)
-                                            // Sau đó mới đánh dấu suggestion đã được chấp nhận
                                             onSuggestionSelected(suggestion, true)
                                         },
                                         label = {

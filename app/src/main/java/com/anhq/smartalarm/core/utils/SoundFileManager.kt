@@ -3,7 +3,6 @@ package com.anhq.smartalarm.core.utils
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import android.webkit.MimeTypeMap
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
@@ -24,16 +23,12 @@ class SoundFileManager @Inject constructor(
 
     fun copyTimerSoundToInternal(uri: Uri): String? {
         return try {
-            // Get original filename from uri
             val filename = getFileName(uri) ?: "timer_sound.mp3"
-            
-            // Delete old files in the directory
+
             soundDir.listFiles()?.forEach { it.delete() }
-            
-            // Create new file with original name
+
             val newFile = File(soundDir, filename)
-            
-            // Copy file content
+
             context.contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(newFile).use { output ->
                     input.copyTo(output)
@@ -47,7 +42,6 @@ class SoundFileManager @Inject constructor(
     }
 
     private fun getFileName(uri: Uri): String? {
-        // Try to get filename from content provider
         context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
                 val displayName = cursor.getColumnIndex("_display_name")
@@ -57,7 +51,6 @@ class SoundFileManager @Inject constructor(
             }
         }
 
-        // If content provider doesn't provide filename, try to get it from path
         uri.path?.let { path ->
             return path.substring(path.lastIndexOf('/') + 1)
         }

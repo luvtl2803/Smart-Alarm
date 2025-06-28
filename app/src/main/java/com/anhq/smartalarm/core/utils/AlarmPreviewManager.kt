@@ -20,7 +20,7 @@ class AlarmPreviewManager @Inject constructor(
 ) {
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
-    private val vibrationPattern = longArrayOf(0, 1000, 200, 1000, 200, 1000, 200, 1000)
+    private val vibrationPattern = longArrayOf(0, 500, 500)
 
     fun startPreview(soundUri: Uri?, isVibrate: Boolean) {
         stopPreview()
@@ -53,16 +53,11 @@ class AlarmPreviewManager @Inject constructor(
                     context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 }
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val effect = VibrationEffect.createWaveform(
-                        vibrationPattern,
-                        0
-                    )
-                    vibrator?.vibrate(effect)
-                } else {
-                    @Suppress("DEPRECATION")
-                    vibrator?.vibrate(vibrationPattern, 0)
-                }
+                val effect = VibrationEffect.createWaveform(
+                    vibrationPattern,
+                    0
+                )
+                vibrator?.vibrate(effect)
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting vibration", e)
             }

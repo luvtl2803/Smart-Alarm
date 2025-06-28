@@ -51,10 +51,8 @@ class SnoozeReceiver : BroadcastReceiver() {
         
         if (alarmId == -1) return
 
-        // Stop current alarm sound and vibration
         AlarmReceiver.stopAlarm()
 
-        // Get snooze settings from SettingDataStore
         val settings = runBlocking {
             preferenceHelper.settingsFlow.first()
         }
@@ -62,38 +60,30 @@ class SnoozeReceiver : BroadcastReceiver() {
         val snoozeDuration = settings.snoozeDurationMinutes
         val maxSnoozeCount = settings.maxSnoozeCount
 
-        // Get current snooze count
         val currentSnoozeCount = intent.getIntExtra("snooze_count", 0)
         if (currentSnoozeCount >= maxSnoozeCount) {
             Log.d(TAG, "Maximum snooze count reached for alarm $alarmId")
-            // Cancel notification even if max snooze reached
             val notificationManager = NotificationManagerCompat.from(context)
             notificationManager.cancel(alarmId)
             return
         }
 
-        // Record alarm history and update suggestions
         CoroutineScope(Dispatchers.IO).launch {
-            // Record alarm history
             alarmHistoryRepository.recordAlarmHistory(
                 alarmId = alarmId,
                 userAction = "SNOOZED",
                 triggeredAt = triggeredAt
             )
 
-            // Update suggestions based on alarm type
             val alarm = alarmRepository.getAlarmById(alarmId).first()
             alarm?.let {
                 if (it.selectedDays.isNotEmpty()) {
-                    // Update suggestions for each day if repeating alarm
                     it.selectedDays.forEach { day ->
                         alarmSuggestionRepository.updateSuggestions(day)
                     }
                 } else {
-                    // For non-repeating alarm, update suggestions for the current day
                     val calendar = Calendar.getInstance()
                     val calendarDay = calendar.get(Calendar.DAY_OF_WEEK)
-                    // Convert from Calendar.DAY_OF_WEEK to our DayOfWeek enum
                     val dayOfWeek = when (calendarDay) {
                         Calendar.MONDAY -> DayOfWeek.MON
                         Calendar.TUESDAY -> DayOfWeek.TUE
@@ -102,14 +92,13 @@ class SnoozeReceiver : BroadcastReceiver() {
                         Calendar.FRIDAY -> DayOfWeek.FRI
                         Calendar.SATURDAY -> DayOfWeek.SAT
                         Calendar.SUNDAY -> DayOfWeek.SUN
-                        else -> DayOfWeek.MON // Fallback to Monday
+                        else -> DayOfWeek.MON
                     }
                     alarmSuggestionRepository.updateSuggestions(dayOfWeek)
                 }
             }
         }
 
-        // Schedule next alarm
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val calendar = Calendar.getInstance().apply {
             add(Calendar.MINUTE, snoozeDuration)
@@ -142,7 +131,6 @@ class SnoozeReceiver : BroadcastReceiver() {
             )
         }
 
-        // Cancel current notification
         val notificationManager = NotificationManagerCompat.from(context)
         notificationManager.cancel(alarmId)
 

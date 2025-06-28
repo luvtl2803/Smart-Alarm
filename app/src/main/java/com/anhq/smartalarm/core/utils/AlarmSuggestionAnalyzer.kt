@@ -9,7 +9,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 class AlarmSuggestionAnalyzer {
     companion object {
@@ -19,7 +18,7 @@ class AlarmSuggestionAnalyzer {
         private const val FREQUENCY_WEIGHT = 0.4f
         private const val TIME_WINDOW_MINUTES = 30
         private const val RESPONSE_TIME_WEIGHT = 0.3f
-        private const val MAX_ACCEPTABLE_RESPONSE_TIME = 5 * 60 * 1000L // 5 minutes in milliseconds
+        private const val MAX_ACCEPTABLE_RESPONSE_TIME = 5 * 60 * 1000L
     }
 
     data class TimePattern(
@@ -41,7 +40,6 @@ class AlarmSuggestionAnalyzer {
             return emptyList()
         }
 
-        // Group history by day of week
         val historyByDay = history.filter { it.dayOfWeek == dayOfWeek }
         Log.d(TAG, "Found ${historyByDay.size} entries for $dayOfWeek")
         
@@ -50,11 +48,9 @@ class AlarmSuggestionAnalyzer {
             return emptyList()
         }
 
-        // Find time patterns
         val timePatterns = findTimePatterns(historyByDay)
         Log.d(TAG, "Found ${timePatterns.size} time patterns")
 
-        // Convert patterns to suggestions
         val suggestions = timePatterns.map { pattern ->
             val confidence = calculateConfidence(pattern, historyByDay.size)
             Log.d(TAG, "Pattern ${pattern.hour}:${pattern.minute} has confidence $confidence")
@@ -76,16 +72,14 @@ class AlarmSuggestionAnalyzer {
 
     private fun findTimePatterns(history: List<AlarmHistoryEntity>): List<TimePattern> {
         val timeGroups = mutableMapOf<Pair<Int, Int>, MutableList<AlarmHistoryEntity>>()
-        
-        // Group alarms by time within TIME_WINDOW_MINUTES window
+
         history.forEach { entry ->
             val instant = Instant.ofEpochMilli(entry.triggeredAt)
             val localTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
             val entryMinutes = localTime.hour * 60 + localTime.minute
             
             Log.d(TAG, "Processing entry at ${localTime.hour}:${localTime.minute}")
-            
-            // Find or create appropriate time group
+
             val matchingGroup = timeGroups.keys.firstOrNull { (hour, minute) ->
                 val groupMinutes = hour * 60 + minute
                 val timeDiff = Math.abs(groupMinutes - entryMinutes)
@@ -104,30 +98,27 @@ class AlarmSuggestionAnalyzer {
 
         Log.d(TAG, "Found ${timeGroups.size} time groups")
 
-        // Convert groups to patterns
         return timeGroups.map { (_, entries) ->
-            // Calculate average time for the group
+
             val avgMinutes = entries.map { entry ->
                 val instant = Instant.ofEpochMilli(entry.triggeredAt)
                 val localTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
                 localTime.hour * 60 + localTime.minute
             }.average()
-            
-            // Use floor division for hours and modulo for minutes to avoid rounding issues
+
             val avgHour = (avgMinutes / 60).toInt()
             val avgMinute = (avgMinutes % 60).toInt()
             
             Log.d(TAG, "Group average time: $avgHour:$avgMinute from ${entries.size} entries")
-            
-            val recentThreshold = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000) // 1 week
+
+            val recentThreshold = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000)
             val recentEntries = entries.count { it.triggeredAt >= recentThreshold }
-            
-            // Calculate average response time only for DISMISSED actions
+
             val dismissedEntries = entries.filter { it.userAction == "DISMISSED" }
             val avgResponseTime = if (dismissedEntries.isNotEmpty()) {
                 dismissedEntries.map { it.actionTime - it.triggeredAt }.average().toLong()
             } else {
-                MAX_ACCEPTABLE_RESPONSE_TIME // Default to max acceptable time if no dismissed entries
+                MAX_ACCEPTABLE_RESPONSE_TIME
             }
             
             TimePattern(
@@ -143,20 +134,17 @@ class AlarmSuggestionAnalyzer {
     }
 
     private fun calculateConfidence(pattern: TimePattern, totalHistorySize: Int): Float {
-        // Calculate frequency score (0-1)
+
         val frequencyScore = min(1f, pattern.frequency.toFloat() / totalHistorySize)
-        
-        // Calculate recency score (0-1)
+
         val recencyScore = min(1f, pattern.recentCount.toFloat() / max(1, pattern.frequency))
-        
-        // Calculate response time score (0-1)
+
         val responseTimeScore = if (pattern.averageResponseTime <= MAX_ACCEPTABLE_RESPONSE_TIME) {
             1f - (pattern.averageResponseTime.toFloat() / MAX_ACCEPTABLE_RESPONSE_TIME)
         } else {
             0f
         }
-        
-        // Weighted average of all factors
+
         val confidence = (FREQUENCY_WEIGHT * frequencyScore + 
                 RECENCY_WEIGHT * recencyScore +
                 RESPONSE_TIME_WEIGHT * responseTimeScore) / 

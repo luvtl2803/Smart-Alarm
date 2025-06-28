@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import androidx.core.app.NotificationManagerCompat
 import com.anhq.smartalarm.core.data.repository.TimerRepository
 import com.anhq.smartalarm.core.service.TimerService
 import dagger.hilt.android.AndroidEntryPoint
@@ -28,27 +27,23 @@ class TimerStopReceiver : BroadcastReceiver() {
         val shouldAddMinute = intent.getBooleanExtra("add_minute", false)
 
         if (timerId != -1) {
-            Log.d(TAG, "Stopping timer $timerId")
+            Log.d(TAG, "Timer action received: timerId=$timerId, shouldAddMinute=$shouldAddMinute")
 
-            // Cancel notification
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.cancel(timerId)
 
-            // Stop sound and vibration
             TimerReceiver.stopTimer()
 
-            // Update timer state
-            CoroutineScope(Dispatchers.IO).launch {
-                timerRepository.getTimerById(timerId)?.let { timer ->
-                    if (shouldAddMinute) {
-                        // If adding a minute, let TimerService handle the update
-                        val serviceIntent = Intent(context, TimerService::class.java).apply {
-                            action = TimerService.ACTION_ADD_MINUTE
-                            putExtra(TimerService.EXTRA_TIMER_ID, timerId)
-                        }
-                        context.startService(serviceIntent)
-                    } else {
-                        // Reset timer to initial time and pause it
+            if (shouldAddMinute) {
+                val serviceIntent = Intent(context, TimerService::class.java).apply {
+                    action = TimerService.ACTION_ADD_MINUTE
+                    putExtra(TimerService.EXTRA_TIMER_ID, timerId)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startForegroundService(serviceIntent)
+            } else {
+                CoroutineScope(Dispatchers.IO).launch {
+                    timerRepository.getTimerById(timerId)?.let { timer ->
                         timerRepository.updateTimer(
                             timer.copy(
                                 isRunning = false,

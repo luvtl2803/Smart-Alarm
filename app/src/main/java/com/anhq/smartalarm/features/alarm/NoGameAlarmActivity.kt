@@ -47,6 +47,7 @@ class NoGameAlarmActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        @Suppress("DEPRECATION")
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                     WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
@@ -63,15 +64,15 @@ class NoGameAlarmActivity : ComponentActivity() {
             keyguardManager.requestDismissKeyguard(this, null)
         }
 
-        // Acquire wake lock
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = powerManager.newWakeLock(
-            PowerManager.FULL_WAKE_LOCK or
+            @Suppress("DEPRECATION")
+            PowerManager.FULL_WAKE_LOCK or @Suppress("DEPRECATION")
                     PowerManager.ACQUIRE_CAUSES_WAKEUP or
                     PowerManager.ON_AFTER_RELEASE,
             "SmartAlarm:AlarmWakeLock"
         )
-        wakeLock.acquire(10 * 60 * 1000L) // 10 minutes
+        wakeLock.acquire(10 * 60 * 1000L)
 
         val alarmId = intent.getIntExtra("alarm_id", -1)
         val isPreview = intent.getBooleanExtra("is_preview", false)

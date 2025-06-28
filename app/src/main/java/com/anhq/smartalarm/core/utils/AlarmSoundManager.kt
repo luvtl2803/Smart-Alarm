@@ -11,7 +11,6 @@ data class AlarmSound(
 )
 
 class AlarmSoundManager(private val context: Context) {
-
     fun getAllAlarmSounds(): List<AlarmSound> {
         val alarmSounds = mutableListOf<AlarmSound>()
         val ringtoneManager = RingtoneManager(context)
@@ -43,7 +42,7 @@ class AlarmSoundManager(private val context: Context) {
     }
 
 
-    fun getFileNameFromUri(context: Context, uri: Uri): String {
+    private fun getFileNameFromUri(context: Context, uri: Uri): String {
         return try {
             val cursor = context.contentResolver.query(uri, null, null, null, null)
             cursor?.use {

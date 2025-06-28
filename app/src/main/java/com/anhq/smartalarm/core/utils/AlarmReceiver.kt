@@ -69,6 +69,7 @@ class AlarmReceiver : BroadcastReceiver() {
         Log.d(TAG, "AlarmReceiver.onReceive() called")
         
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        @Suppress("DEPRECATION")
         val wakeLock = powerManager.newWakeLock(
             PowerManager.FULL_WAKE_LOCK or 
             PowerManager.ACQUIRE_CAUSES_WAKEUP or 
@@ -95,16 +96,11 @@ class AlarmReceiver : BroadcastReceiver() {
                     
             alarm?.let {
                         withContext(Dispatchers.Main) {
-                            // Start vibration if enabled
                 if (it.isVibrate) {
                                 Log.d(TAG, "Starting vibration for alarm ${it.id}")
                     startVibration(context)
                 }
-                            
-                            // Play alarm sound
                             playAlarmSound(context, it)
-                            
-                            // Show notification and start appropriate activity
                             showFullScreenNotification(
                                 context,
                                 it,
@@ -135,8 +131,6 @@ class AlarmReceiver : BroadcastReceiver() {
         
         try {
             notificationManager.notify(alarm.id, notification)
-            
-            // Start appropriate activity based on game type
             createFullScreenIntent(context, alarm, isRepeating, snoozeCount).send()
         } catch (e: Exception) {
             Log.e(TAG, "Error showing notification or starting activity", e)
@@ -261,17 +255,18 @@ class AlarmReceiver : BroadcastReceiver() {
                 }
             } else {
                 Log.d(TAG, "Using legacy Vibrator service")
+                @Suppress("DEPRECATION")
                 context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             }
 
             val effect = VibrationEffect.createWaveform(
                 vibrationPattern,
-                vibrationAmplitudes,
-                0 // 0 means repeat indefinitely
+                vibrationAmplitudes, 0
             )
             Log.d(TAG, "Starting vibration with waveform effect")
             vibrator?.let {
                 if (it.hasVibrator()) {
+                    @Suppress("DEPRECATION")
                     it.vibrate(
                         effect, AudioAttributes.Builder()
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -290,7 +285,6 @@ class AlarmReceiver : BroadcastReceiver() {
 
     private fun playAlarmSound(context: Context, alarm: Alarm) {
         try {
-            // Release existing media player if exists
             mediaPlayer?.release()
             mediaPlayer = null
 

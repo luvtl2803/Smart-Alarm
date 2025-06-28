@@ -5,9 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.anhq.smartalarm.R
 import com.anhq.smartalarm.app.MainActivity
@@ -15,6 +13,7 @@ import com.anhq.smartalarm.core.data.repository.TimerRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -34,6 +33,8 @@ class TimerService : Service() {
     private var lastNotifiedTime = -1L
     private var lastRunningCount = -1
 
+    private lateinit var updateJob: Job
+
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "timer_service_channel"
         private const val NOTIFICATION_ID = 1
@@ -48,9 +49,7 @@ class TimerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            createNotificationChannel()
-        }
+        createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -61,56 +60,58 @@ class TimerService : Service() {
             ACTION_RESET -> handleResetAction(intent.getIntExtra(EXTRA_TIMER_ID, -1))
         }
 
-        serviceScope.launch {
-            try {
-                while (true) {
-                    val currentTime = System.currentTimeMillis()
-                    val timers = timerRepository.timers.first()
-                    val runningTimers = timers.filter { it.isRunning }
+        // Start monitoring timers if not already started
+        if (!::updateJob.isInitialized || updateJob.isCancelled) {
+            updateJob = serviceScope.launch {
+                try {
+                    while (true) {
+                        val currentTime = System.currentTimeMillis()
+                        val timers = timerRepository.timers.first()
+                        val runningTimers = timers.filter { it.isRunning }
 
-                    if (runningTimers.isEmpty()) {
-                        stopForeground(STOP_FOREGROUND_REMOVE)
-                        stopSelf()
-                        break
-                    }
-
-                    val nearestTimer = runningTimers.minByOrNull { it.remainingTimeMillis }
-                    val remainingTime = nearestTimer?.let {
-                        if (it.isPaused) {
-                            it.remainingTimeMillis
-                        } else {
-                            val elapsed = currentTime - it.lastTickTime
-                            val remaining = (it.remainingTimeMillis - elapsed).coerceAtLeast(0)
-                            if (remaining == 0L) {
-                                // Timer ended, stop showing notification
-                                stopForeground(STOP_FOREGROUND_REMOVE)
-                                stopSelf()
-                                null
-                            } else {
-                                remaining
-                            }
+                        if (runningTimers.isEmpty()) {
+                            stopForeground(STOP_FOREGROUND_REMOVE)
+                            stopSelf()
+                            break
                         }
-                    } ?: 0
 
-                    if (remainingTime > 0 && shouldUpdateNotification(runningTimers.size)) {
-                        val notification = buildNotification(
-                            runningTimers.size,
-                            remainingTime,
-                            nearestTimer?.id ?: -1,
-                            nearestTimer?.isPaused ?: false
-                        )
-                        startForeground(NOTIFICATION_ID, notification)
+                        val nearestTimer = runningTimers.minByOrNull { it.remainingTimeMillis }
+                        val remainingTime = nearestTimer?.let {
+                            if (it.isPaused) {
+                                it.remainingTimeMillis
+                            } else {
+                                val elapsed = currentTime - it.lastTickTime
+                                val remaining = (it.remainingTimeMillis - elapsed).coerceAtLeast(0)
+                                if (remaining == 0L) {
+                                    stopForeground(STOP_FOREGROUND_REMOVE)
+                                    stopSelf()
+                                    null
+                                } else {
+                                    remaining
+                                }
+                            }
+                        } ?: 0
 
-                        lastNotificationUpdate = currentTime
-                        lastNotifiedTime = remainingTime
-                        lastRunningCount = runningTimers.size
+                        if (remainingTime > 0 && shouldUpdateNotification(runningTimers.size)) {
+                            val notification = buildNotification(
+                                runningTimers.size,
+                                remainingTime,
+                                nearestTimer?.id ?: -1,
+                                nearestTimer?.isPaused ?: false
+                            )
+                            startForeground(NOTIFICATION_ID, notification)
+
+                            lastNotificationUpdate = currentTime
+                            lastNotifiedTime = remainingTime
+                            lastRunningCount = runningTimers.size
+                        }
+
+                        delay(100)
                     }
-
-                    delay(100)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    stopSelf()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                stopSelf()
             }
         }
 
@@ -155,26 +156,37 @@ class TimerService : Service() {
     private fun handleAddMinuteAction(timerId: Int) {
         if (timerId != -1) {
             serviceScope.launch {
-                // Start a temporary 1-minute countdown without saving to database
-                val endTime = System.currentTimeMillis() + 60_000L // 1 minute
-                var remainingTime = 60_000L
+                timerRepository.getTimerById(timerId)?.let { timer ->
+                    val now = System.currentTimeMillis()
 
-                while (remainingTime > 0) {
-                    val notification = buildNotification(
-                        1,
-                        remainingTime,
-                        timerId,
-                        false
-                    )
-                    startForeground(NOTIFICATION_ID, notification)
+                    if (timer.isRunning && !timer.isPaused && timer.remainingTimeMillis > 0) {
+                        val elapsedTime = (now - timer.lastTickTime).coerceAtLeast(0)
+                        val currentRemainingTime =
+                            (timer.remainingTimeMillis - elapsedTime).coerceAtLeast(0)
+                        val additionalTime = 60_000L
+                        val newRemainingTime = currentRemainingTime + additionalTime
 
-                    delay(100)
-                    remainingTime = (endTime - System.currentTimeMillis()).coerceAtLeast(0)
+                        timerRepository.updateTimer(
+                            timer.copy(
+                                isRunning = true,
+                                isPaused = false,
+                                remainingTimeMillis = newRemainingTime,
+                                currentInitialTimeMillis = timer.currentInitialTimeMillis + additionalTime,
+                                lastTickTime = now
+                            )
+                        )
+                    } else {
+                        timerRepository.updateTimer(
+                            timer.copy(
+                                isRunning = true,
+                                isPaused = false,
+                                remainingTimeMillis = 60_000L,
+                                currentInitialTimeMillis = 60_000L,
+                                lastTickTime = now
+                            )
+                        )
+                    }
                 }
-
-                // When countdown finishes
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
             }
         }
     }
@@ -215,10 +227,12 @@ class TimerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (::updateJob.isInitialized) {
+            updateJob.cancel()
+        }
         serviceJob.cancel()
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
@@ -252,9 +266,9 @@ class TimerService : Service() {
             }
         )
         .setContentText(
-            when {
-                runningTimersCount == 0 -> "Chạm để mở ứng dụng"
-                runningTimersCount == 1 -> formatTime(remainingTime)
+            when (runningTimersCount) {
+                0 -> "Chạm để mở ứng dụng"
+                1 -> formatTime(remainingTime)
                 else -> "Gần nhất: ${formatTime(remainingTime)}"
             }
         )

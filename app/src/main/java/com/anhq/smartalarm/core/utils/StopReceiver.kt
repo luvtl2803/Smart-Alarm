@@ -14,20 +14,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 import java.util.Calendar
+import javax.inject.Inject
 
-/**
- * BroadcastReceiver to handle stopping the alarm and clearing related notifications.
- */
 @AndroidEntryPoint
 class StopReceiver : BroadcastReceiver() {
     @Inject
     lateinit var alarmRepository: AlarmRepository
-
     @Inject
     lateinit var alarmHistoryRepository: AlarmHistoryRepository
-
     @Inject
     lateinit var alarmSuggestionRepository: AlarmSuggestionRepository
 
@@ -46,15 +41,10 @@ class StopReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "Stopping alarm $alarmId")
 
-        // Stop alarm sound and vibration
         AlarmReceiver.stopAlarm()
-
-        // Cancel notification
         NotificationManagerCompat.from(context).cancel(alarmId)
 
-        // Update alarm state and record history
         CoroutineScope(Dispatchers.IO).launch {
-            // Record alarm history
             alarmHistoryRepository.recordAlarmHistory(
                 alarmId = alarmId,
                 userAction = "DISMISSED",
@@ -63,16 +53,13 @@ class StopReceiver : BroadcastReceiver() {
             
             val alarm = alarmRepository.getAlarmById(alarmId).firstOrNull()
             alarm?.let {
-                // Update suggestions for each day if repeating alarm
                 if (it.selectedDays.isNotEmpty()) {
                     it.selectedDays.forEach { day ->
                         alarmSuggestionRepository.updateSuggestions(day)
                     }
                 } else {
-                    // For non-repeating alarm, update suggestions for the current day
                     val calendar = Calendar.getInstance()
                     val calendarDay = calendar.get(Calendar.DAY_OF_WEEK)
-                    // Convert from Calendar.DAY_OF_WEEK to our DayOfWeek enum
                     val dayOfWeek = when (calendarDay) {
                         Calendar.MONDAY -> DayOfWeek.MON
                         Calendar.TUESDAY -> DayOfWeek.TUE
@@ -81,12 +68,11 @@ class StopReceiver : BroadcastReceiver() {
                         Calendar.FRIDAY -> DayOfWeek.FRI
                         Calendar.SATURDAY -> DayOfWeek.SAT
                         Calendar.SUNDAY -> DayOfWeek.SUN
-                        else -> DayOfWeek.MON // Fallback to Monday
+                        else -> DayOfWeek.MON
                     }
                     alarmSuggestionRepository.updateSuggestions(dayOfWeek)
                 }
 
-                // Only disable alarms with no repeat days
                 if (it.selectedDays.isEmpty()) {
                     Log.d(TAG, "Disabling non-repeating alarm $alarmId")
                     alarmRepository.updateAlarm(it.copy(isActive = false))

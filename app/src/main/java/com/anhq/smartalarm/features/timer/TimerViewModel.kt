@@ -39,15 +39,13 @@ class TimerViewModel @Inject constructor(
             }
         }
 
-        // Start countdown update loop
         viewModelScope.launch {
             while (true) {
-                delay(1000) // Update every second
+                delay(1000)
                 updateRunningTimers()
             }
         }
 
-        // Monitor running timers for service
         viewModelScope.launch {
             runningTimers.collect { timers ->
                 val context = getApplication<Application>()
@@ -67,13 +65,13 @@ class TimerViewModel @Inject constructor(
                 val newRemainingTime = (timer.remainingTimeMillis - elapsedTime).coerceAtLeast(0)
 
                 if (newRemainingTime == 0L) {
-                    // Timer completed - Reset to initial time and pause
                     handleTimerComplete(timer)
                     timer.copy(
                         isRunning = true,
                         isPaused = true,
                         remainingTimeMillis = timer.currentInitialTimeMillis,
-                        endedAt = now
+                        endedAt = now,
+                        lastTickTime = now
                     )
                 } else {
                     timer.copy(
@@ -87,7 +85,6 @@ class TimerViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            // Update all modified timers in database
             updatedTimers.forEach { timer ->
                 val originalTimer = _timers.value.find { it.id == timer.id }
                 if (originalTimer != timer) {
@@ -98,7 +95,6 @@ class TimerViewModel @Inject constructor(
 
         _timers.value = updatedTimers
 
-        // Start service to show notification
         val context = getApplication<Application>()
         if (updatedTimers.any { it.isRunning && !it.isPaused }) {
             val serviceIntent = Intent(context, TimerService::class.java)
@@ -109,7 +105,6 @@ class TimerViewModel @Inject constructor(
     private fun handleTimerComplete(timer: Timer) {
         val context = getApplication<Application>()
         viewModelScope.launch {
-            // Get first value from settingsFlow
             val settings = preferenceHelper.settingsFlow.first()
             val intent = Intent(context, TimerReceiver::class.java).apply {
                 action = "com.anhq.smartalarm.TIMER_COMPLETE"
@@ -122,7 +117,6 @@ class TimerViewModel @Inject constructor(
     }
 
     fun addTimer(totalMillis: Long) {
-        // Validate that timer duration is at least 1 second
         if (totalMillis < 1000L) {
             return
         }
@@ -136,7 +130,6 @@ class TimerViewModel @Inject constructor(
             )
             timerRepository.addTimer(timer)
 
-            // Start service immediately when adding a new timer
             val context = getApplication<Application>()
             val serviceIntent = Intent(context, TimerService::class.java)
             context.startForegroundService(serviceIntent)
@@ -165,6 +158,8 @@ class TimerViewModel @Inject constructor(
                 val now = System.currentTimeMillis()
                 val updatedTimer = timer.copy(
                     isPaused = false,
+                    isRunning = true,
+                    remainingTimeMillis = if (timer.remainingTimeMillis == 0L) timer.currentInitialTimeMillis else timer.remainingTimeMillis,
                     lastTickTime = now
                 )
                 timerRepository.updateTimer(updatedTimer)
@@ -182,22 +177,20 @@ class TimerViewModel @Inject constructor(
         viewModelScope.launch {
             timerRepository.getTimerById(timerId)?.let { timer ->
                 val now = System.currentTimeMillis()
-                val additionalTime = 60_000L // 1 minute in milliseconds
-
-                // Calculate current remaining time
-                val currentRemainingTime = if (timer.isRunning && !timer.isPaused) {
-                    val elapsedTime = now - timer.lastTickTime
-                    (timer.remainingTimeMillis - elapsedTime).coerceAtLeast(0)
+                val elapsedTime = if (timer.isRunning && !timer.isPaused) {
+                    (now - timer.lastTickTime).coerceAtLeast(0)
                 } else {
-                    timer.remainingTimeMillis
+                    0
                 }
-
-                // Add one minute to current remaining time
+                val currentRemainingTime = (timer.remainingTimeMillis - elapsedTime).coerceAtLeast(0)
+                val additionalTime = 60_000L
                 val newRemainingTime = currentRemainingTime + additionalTime
 
                 val newTimer = timer.copy(
                     currentInitialTimeMillis = timer.currentInitialTimeMillis + additionalTime,
                     remainingTimeMillis = newRemainingTime,
+                    isRunning = true,
+                    isPaused = false,
                     lastTickTime = now
                 )
 

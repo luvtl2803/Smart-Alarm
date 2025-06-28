@@ -41,7 +41,7 @@ class TimerReceiver : BroadcastReceiver() {
             PowerManager.PARTIAL_WAKE_LOCK,
             "SmartAlarm:TimerWakeLock"
         ).apply {
-            acquire(30 * 1000L) // 30 seconds
+            acquire(30 * 1000L)
         }
 
         scope.launch {
@@ -59,12 +59,10 @@ class TimerReceiver : BroadcastReceiver() {
                     return@launch
                 }
 
-                // Stop any existing vibration first
                 vibrator?.cancel()
                 vibrateJob?.cancelAndJoin()
                 vibrator = null
 
-                // Play sound
                 withContext(Dispatchers.IO) {
                     try {
                         mediaPlayer?.release()
@@ -87,7 +85,6 @@ class TimerReceiver : BroadcastReceiver() {
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        // Fallback to notification sound if alarm sound fails
                         try {
                             mediaPlayer = MediaPlayer().apply {
                                 val uri =
@@ -109,7 +106,6 @@ class TimerReceiver : BroadcastReceiver() {
                     }
                 }
 
-                // Only setup vibration if explicitly enabled
                 if (isVibrate) {
                     Log.d(TAG, "Setting up vibration")
                     vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -124,18 +120,14 @@ class TimerReceiver : BroadcastReceiver() {
                     vibrateJob = scope.launch(Dispatchers.Default) {
                         try {
                             val pattern = longArrayOf(0, 1000, 1000)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                val effect = VibrationEffect.createWaveform(pattern, 0)
-                                vibrator?.vibrate(
-                                    effect, AudioAttributes.Builder()
-                                        .setUsage(AudioAttributes.USAGE_ALARM)
-                                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                        .build()
-                                )
-                            } else {
-                                @Suppress("DEPRECATION")
-                                vibrator?.vibrate(pattern, 0)
-                            }
+                            val effect = VibrationEffect.createWaveform(pattern, 0)
+                            @Suppress("DEPRECATION")
+                            vibrator?.vibrate(
+                                effect, AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_ALARM)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                    .build()
+                            )
                         } catch (e: Exception) {
                             Log.e(TAG, "Error in vibration job", e)
                         }
@@ -144,10 +136,8 @@ class TimerReceiver : BroadcastReceiver() {
                     Log.d(TAG, "Vibration disabled")
                 }
 
-                // Show notification and start end activity
                 showFullScreenNotification(context, timerId, endTime)
 
-                // Start updating elapsed time
                 updateJob?.cancelAndJoin()
                 updateJob = scope.launch(Dispatchers.Main) {
                     try {
@@ -176,7 +166,6 @@ class TimerReceiver : BroadcastReceiver() {
 
         createNotificationChannel(notificationManager)
 
-        // Show notification
         val notification = buildNotification(context, timerId, endTime)
         try {
             notificationManager.notify(timerId, notification)
@@ -186,22 +175,20 @@ class TimerReceiver : BroadcastReceiver() {
     }
 
     private fun createNotificationChannel(notificationManager: NotificationManager) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Hẹn giờ kết thúc",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Thông báo khi hẹn giờ kết thúc"
-                setBypassDnd(true)
-                enableLights(true)
-                enableVibration(false) // Disable default vibration
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                setSound(null, null) // We handle sound separately
-                setShowBadge(true)
-            }
-            notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Hẹn giờ kết thúc",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Thông báo khi hẹn giờ kết thúc"
+            setBypassDnd(true)
+            enableLights(true)
+            enableVibration(false)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            setSound(null, null)
+            setShowBadge(true)
         }
+        notificationManager.createNotificationChannel(channel)
     }
 
     private fun buildNotification(context: Context, timerId: Int, endTime: Long): Notification {
@@ -217,8 +204,8 @@ class TimerReceiver : BroadcastReceiver() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(false)
             .setOngoing(true)
-            .setSound(null) // We handle sound separately
-            .setVibrate(null) // We handle vibration separately
+            .setSound(null)
+            .setVibrate(null)
             .addAction(
                 R.drawable.ic_add,
                 "+1 phút",
@@ -256,7 +243,7 @@ class TimerReceiver : BroadcastReceiver() {
         }
         return PendingIntent.getBroadcast(
             context,
-            timerId + 1000, // Different request code to avoid conflict
+            timerId + 1000,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

@@ -18,6 +18,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.anhq.smartalarm.core.data.repository.AlarmRepository
 import com.anhq.smartalarm.core.data.repository.AlarmSuggestionRepository
+import com.anhq.smartalarm.core.database.model.AlarmSuggestionEntity
 import com.anhq.smartalarm.core.model.Alarm
 import com.anhq.smartalarm.core.model.AlarmGameType
 import com.anhq.smartalarm.core.model.DayOfWeek
@@ -27,12 +28,12 @@ import com.anhq.smartalarm.core.utils.AlarmSound
 import com.anhq.smartalarm.core.utils.AlarmSoundManager
 import com.anhq.smartalarm.features.alarm.NoGameAlarmActivity
 import com.anhq.smartalarm.features.game.AlarmGameActivity
-import com.anhq.smartalarm.core.database.model.AlarmSuggestionEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.LocalTime
@@ -74,6 +75,9 @@ class AddAlarmViewModel @Inject constructor(
 
     private val _suggestions = MutableStateFlow<List<AlarmSuggestionEntity>>(emptyList())
     val suggestions: StateFlow<List<AlarmSuggestionEntity>> = _suggestions.asStateFlow()
+
+    private val _showDuplicateDialog = MutableStateFlow<Alarm?>(null)
+    val showDuplicateDialog = _showDuplicateDialog.asStateFlow()
 
     init {
         loadSystemAlarmSounds()
@@ -151,7 +155,6 @@ class AddAlarmViewModel @Inject constructor(
     }
 
     private fun createAlarm(): Alarm {
-        // Get the actual sound URI, either from selected sound or default
         val soundUri = try {
             selectedSound.value?.uri?.toString() ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM).toString()
         } catch (e: Exception) {
@@ -172,14 +175,57 @@ class AddAlarmViewModel @Inject constructor(
         )
     }
 
-    fun saveAlarm() {
+    private suspend fun checkDuplicateAlarm(newAlarm: Alarm): Alarm? {
+        return alarmRepository.getAllAlarms().first().find { existingAlarm ->
+            existingAlarm.hour == newAlarm.hour &&
+            existingAlarm.minute == newAlarm.minute &&
+            existingAlarm.selectedDays == newAlarm.selectedDays
+        }
+    }
+
+    fun saveAlarm(onSuccess: () -> Unit) {
         if (!checkAlarmPermission()) return
 
         viewModelScope.launch {
             val alarm = createAlarm()
-            val id = alarmRepository.insertAlarm(alarm)
-            scheduleAlarm(alarm.copy(id = id))
+            val duplicateAlarm = checkDuplicateAlarm(alarm)
+            
+            if (duplicateAlarm != null) {
+                _showDuplicateDialog.value = duplicateAlarm
+            } else {
+                val id = alarmRepository.insertAlarm(alarm)
+                scheduleAlarm(alarm.copy(id = id))
+                onSuccess()
+            }
         }
+    }
+
+    fun overwriteAlarm(onSuccess: () -> Unit) {
+        if (!checkAlarmPermission()) return
+
+        viewModelScope.launch {
+            val newAlarm = createAlarm()
+            val duplicateAlarm = _showDuplicateDialog.value
+
+            if (duplicateAlarm != null) {
+                // Update existing alarm with new settings
+                val updatedAlarm = duplicateAlarm.copy(
+                    label = newAlarm.label,
+                    isActive = newAlarm.isActive,
+                    isVibrate = newAlarm.isVibrate,
+                    gameType = newAlarm.gameType,
+                    soundUri = newAlarm.soundUri
+                )
+                alarmRepository.updateAlarm(updatedAlarm)
+                scheduleAlarm(updatedAlarm)
+                _showDuplicateDialog.value = null
+                onSuccess()
+            }
+        }
+    }
+
+    fun dismissDuplicateDialog() {
+        _showDuplicateDialog.value = null
     }
 
     private fun scheduleAlarm(alarm: Alarm) {
@@ -194,7 +240,6 @@ class AddAlarmViewModel @Inject constructor(
             set(Calendar.MILLISECOND, 0)
         }
 
-        // If time has passed and no repeat days
         if (calendar.timeInMillis < System.currentTimeMillis() && alarm.selectedDays.isEmpty()) {
             calendar.add(Calendar.DAY_OF_MONTH, 1)
         }
@@ -205,7 +250,6 @@ class AddAlarmViewModel @Inject constructor(
         }
 
         if (alarm.selectedDays.isEmpty()) {
-            // Single alarm
             val pendingIntent = PendingIntent.getBroadcast(
                 application,
                 alarm.id,
@@ -219,9 +263,11 @@ class AddAlarmViewModel @Inject constructor(
 
             val timeStr = formatTime(calendar)
             Log.d(TAG, "Single alarm set: $timeStr with game type: ${alarm.gameType}")
-            showToast("Alarm set for $timeStr")
+            showToast("Đã đặt báo thức lúc $timeStr")
         } else {
-            // Repeating alarms for each selected day
+            val daysString = alarm.selectedDays.joinToString(", ") { it.label }
+            val timeStr = String.format(Locale.US, "%02d:%02d", alarm.hour, alarm.minute)
+            
             alarm.selectedDays.forEach { dayOfWeek ->
                 val nextAlarmTime = calculateNextAlarmTime(alarm.hour, alarm.minute, dayOfWeek)
                 val uniqueId = alarm.id * 10 + dayOfWeek.ordinal
@@ -236,13 +282,13 @@ class AddAlarmViewModel @Inject constructor(
                     pendingIntent
                 )
 
-                val timeStr = formatTime(Calendar.getInstance().apply { timeInMillis = nextAlarmTime })
                 Log.d(
                     TAG,
                     "Repeating alarm set: $timeStr (requestCode: $uniqueId) with game type: ${alarm.gameType}"
                 )
-                showToast("Repeating alarm set for $timeStr")
             }
+
+            showToast("Đã đặt báo thức lúc $timeStr vào các ngày: $daysString")
         }
     }
 
@@ -267,9 +313,8 @@ class AddAlarmViewModel @Inject constructor(
         val currentDay = calendar.get(Calendar.DAY_OF_WEEK)
         var daysUntilNext = (targetDayOfWeek - currentDay + 7) % 7
 
-        // If target is today but time has passed
         if (daysUntilNext == 0 && calendar.timeInMillis <= System.currentTimeMillis()) {
-            daysUntilNext = 7 // Schedule for next week
+            daysUntilNext = 7
         }
 
         calendar.add(Calendar.DAY_OF_MONTH, daysUntilNext)
@@ -309,13 +354,10 @@ class AddAlarmViewModel @Inject constructor(
 
     fun loadSuggestionsForDay(dayOfWeek: DayOfWeek) {
         viewModelScope.launch {
-            // Update suggestions first
             alarmSuggestionRepository.updateSuggestions(dayOfWeek)
-            
-            // Then collect and filter suggestions
+
             alarmSuggestionRepository.getSuggestionsForDay(dayOfWeek)
                 .collect { allSuggestions ->
-                    // If no repeat days selected (one-time alarm), filter suggestions
                     val filteredSuggestions = if (selectedDays.value.isEmpty()) {
                         val currentTime = LocalTime.now()
                         allSuggestions.filter { suggestion ->
@@ -323,7 +365,6 @@ class AddAlarmViewModel @Inject constructor(
                             suggestionTime.isAfter(currentTime)
                         }
                     } else {
-                        // For repeating alarms, show all suggestions
                         allSuggestions
                     }
                     
