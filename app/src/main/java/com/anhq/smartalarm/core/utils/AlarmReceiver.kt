@@ -1,5 +1,6 @@
 package com.anhq.smartalarm.core.utils
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -30,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -65,6 +67,7 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
 
+    @SuppressLint("SuspiciousIndentation")
     override fun onReceive(context: Context, intent: Intent) {
         Log.d(TAG, "AlarmReceiver.onReceive() called")
         
@@ -216,7 +219,7 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     private fun createStopIntent(context: Context, alarmId: Int): PendingIntent {
-        val intent = Intent(context, StopReceiver::class.java).apply {
+        val intent = Intent(context, AlarmStopReceiver::class.java).apply {
             putExtra("alarm_id", alarmId)
             putExtra("triggered_at", System.currentTimeMillis())
         }
@@ -229,7 +232,7 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     private fun createSnoozeIntent(context: Context, alarmId: Int, isRepeating: Boolean, snoozeCount: Int): PendingIntent {
-        val intent = Intent(context, SnoozeReceiver::class.java).apply {
+        val intent = Intent(context, AlarmSnoozeReceiver::class.java).apply {
             putExtra("alarm_id", alarmId)
             putExtra("is_repeating", isRepeating)
             putExtra("snooze_count", snoozeCount)
@@ -290,9 +293,17 @@ class AlarmReceiver : BroadcastReceiver() {
 
             val alarmSound = try {
                 if (alarm.soundUri.isNotEmpty()) {
-                    alarm.soundUri.toUri()
+                    val uri = alarm.soundUri.toUri()
+                    if (uri.scheme == "file") {
+                        val file = File(uri.path!!)
+                        if (!file.exists()) {
+                            Log.e(TAG, "Alarm sound file not found: ${uri.path}")
+                            throw Exception("Sound file not found")
+                        }
+                    }
+                    uri
                 } else {
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    return
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error parsing sound URI, using default", e)

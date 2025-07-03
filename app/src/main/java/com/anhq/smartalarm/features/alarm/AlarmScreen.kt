@@ -61,11 +61,13 @@ fun AlarmRoute(
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedAlarms by viewModel.selectedAlarms.collectAsStateWithLifecycle()
+    val showDeleteConfirmation by viewModel.showDeleteConfirmation.collectAsStateWithLifecycle()
 
     AlarmScreen(
         alarms = alarms,
         isSelectionMode = isSelectionMode,
         selectedAlarms = selectedAlarms,
+        showDeleteConfirmation = showDeleteConfirmation,
         setAlarmActive = { alarm, isActive ->
             viewModel.updateAlarmStatus(alarm = alarm, isActive = isActive)
         },
@@ -77,7 +79,9 @@ fun AlarmRoute(
         },
         onToggleSelectionMode = viewModel::toggleSelectionMode,
         onToggleAlarmSelection = viewModel::toggleAlarmSelection,
-        onDeleteSelected = viewModel::deleteSelectedAlarms
+        onDeleteSelected = viewModel::showDeleteConfirmationDialog,
+        onConfirmDelete = viewModel::confirmDeleteSelectedAlarms,
+        onDismissDelete = viewModel::hideDeleteConfirmationDialog
     )
 }
 
@@ -86,12 +90,15 @@ fun AlarmScreen(
     alarms: List<Alarm>,
     isSelectionMode: Boolean,
     selectedAlarms: Set<Int>,
+    showDeleteConfirmation: Boolean,
     setAlarmActive: (Alarm, Boolean) -> Unit,
     onEditClick: (Int) -> Unit,
     onAddClick: () -> Unit,
     onToggleSelectionMode: () -> Unit,
     onToggleAlarmSelection: (Int) -> Unit,
-    onDeleteSelected: () -> Unit
+    onDeleteSelected: () -> Unit,
+    onConfirmDelete: () -> Unit,
+    onDismissDelete: () -> Unit
 ) {
     Scaffold(
         modifier = Modifier.padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
@@ -184,6 +191,42 @@ fun AlarmScreen(
                         contentDescription = if (isSelectionMode) "Delete selected" else "Add alarm"
                     )
                 }
+            }
+
+            if (showDeleteConfirmation) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = onDismissDelete,
+                    title = {
+                        Text(
+                            text = "Xác nhận xóa",
+                            style = title2
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "Bạn có chắc chắn muốn xóa ${selectedAlarms.size} báo thức đã chọn không?",
+                            style = label1
+                        )
+                    },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(
+                            onClick = onConfirmDelete
+                        ) {
+                            Text(
+                                text = "Xóa",
+                                style = title3,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(
+                            onClick = onDismissDelete
+                        ) {
+                            Text(text = "Hủy", style = title3)
+                        }
+                    }
+                )
             }
         }
     }
@@ -319,6 +362,10 @@ fun PreviewAlarmItem() {
             onAddClick = {},
             onToggleSelectionMode = {},
             onToggleAlarmSelection = {},
-            onDeleteSelected = {})
+            onDeleteSelected = {},
+            onConfirmDelete = {},
+            onDismissDelete = {},
+            showDeleteConfirmation = false
+        )
     }
 }

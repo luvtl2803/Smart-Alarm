@@ -26,6 +26,7 @@ import com.anhq.smartalarm.core.utils.AlarmPreviewManager
 import com.anhq.smartalarm.core.utils.AlarmReceiver
 import com.anhq.smartalarm.core.utils.AlarmSound
 import com.anhq.smartalarm.core.utils.AlarmSoundManager
+import com.anhq.smartalarm.core.utils.SoundFileManager
 import com.anhq.smartalarm.features.alarm.NoGameAlarmActivity
 import com.anhq.smartalarm.features.game.AlarmGameActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,7 +47,8 @@ class AddAlarmViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val alarmRepository: AlarmRepository,
     private val alarmPreviewManager: AlarmPreviewManager,
-    private val alarmSuggestionRepository: AlarmSuggestionRepository
+    private val alarmSuggestionRepository: AlarmSuggestionRepository,
+    private val soundFileManager: SoundFileManager
 ) : ViewModel() {
 
     private val application = context.applicationContext as Application
@@ -90,16 +92,13 @@ class AddAlarmViewModel @Inject constructor(
             title = "Im lặng"
         )
 
+        val defaultUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
         val defaultAlarmSound = AlarmSound(
-            uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-            title = getTitleFromUri(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
+            uri = defaultUri,
+            title = alarmSoundManager.getAlarmTitleFromUri(defaultUri)
         )
         _alarmSounds.value = listOf(noSound) + listOf(defaultAlarmSound) + alarmSoundManager.getAllAlarmSounds()
         _selectedSound.value = defaultAlarmSound
-    }
-
-    private fun getTitleFromUri(uri: Uri): String{
-        return alarmSoundManager.getAlarmTitleFromUri(uri)
     }
 
     fun setLabel(label: String) {
@@ -114,8 +113,28 @@ class AddAlarmViewModel @Inject constructor(
         _isVibrate.value = isVibrate
     }
 
-    fun setAlarmSound(uri: Uri) {
-        _selectedSound.value = AlarmSound(uri, getTitleFromUri(uri))
+    fun setAlarmSound(soundUri: Uri) {
+        Log.d("SoundUri", soundUri.toString())
+        if (soundUri.toString().isNotEmpty()) {
+            if (soundUri.toString().startsWith("content://com.android.providers")) {
+                val internalUri = soundFileManager.copyAlarmSoundToInternal(soundUri)
+                if (internalUri != null) {
+                    _selectedSound.value = AlarmSound(
+                        title = alarmSoundManager.getAlarmTitleFromUri(internalUri.toUri()),
+                        uri = internalUri.toUri()
+                    )
+                }
+            } else {
+                _selectedSound.value = AlarmSound(
+                    title = alarmSoundManager.getAlarmTitleFromUri(soundUri), uri = soundUri
+                )
+            }
+        } else {
+            soundFileManager.deleteAlarmSound()
+            _selectedSound.value = AlarmSound(
+                title = "Im lặng", uri = soundUri
+            )
+        }
     }
 
     fun previewAlarm(): Intent {
@@ -208,7 +227,6 @@ class AddAlarmViewModel @Inject constructor(
             val duplicateAlarm = _showDuplicateDialog.value
 
             if (duplicateAlarm != null) {
-                // Update existing alarm with new settings
                 val updatedAlarm = duplicateAlarm.copy(
                     label = newAlarm.label,
                     isActive = newAlarm.isActive,

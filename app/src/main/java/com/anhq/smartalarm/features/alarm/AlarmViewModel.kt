@@ -47,6 +47,9 @@ class AlarmViewModel @Inject constructor(
     private val _selectedAlarms = MutableStateFlow<Set<Int>>(emptySet())
     val selectedAlarms = _selectedAlarms.asStateFlow()
 
+    private val _showDeleteConfirmation = MutableStateFlow(false)
+    val showDeleteConfirmation = _showDeleteConfirmation.asStateFlow()
+
     fun toggleSelectionMode() {
         _isSelectionMode.value = !_isSelectionMode.value
         if (!_isSelectionMode.value) {
@@ -62,7 +65,15 @@ class AlarmViewModel @Inject constructor(
         }
     }
 
-    fun deleteSelectedAlarms() {
+    fun showDeleteConfirmationDialog() {
+        _showDeleteConfirmation.value = true
+    }
+
+    fun hideDeleteConfirmationDialog() {
+        _showDeleteConfirmation.value = false
+    }
+
+    fun confirmDeleteSelectedAlarms() {
         viewModelScope.launch {
             _selectedAlarms.value.forEach { alarmId ->
                 alarms.value.find { it.id == alarmId }?.let { alarm ->
@@ -71,6 +82,7 @@ class AlarmViewModel @Inject constructor(
             }
             _selectedAlarms.value = emptySet()
             _isSelectionMode.value = false
+            _showDeleteConfirmation.value = false
         }
     }
 

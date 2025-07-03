@@ -27,11 +27,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.anhq.smartalarm.core.designsystem.theme.SmartAlarmTheme
-import com.anhq.smartalarm.core.designsystem.theme.label2
+import com.anhq.smartalarm.core.designsystem.theme.title3
 import com.anhq.smartalarm.core.utils.AlarmPreviewManager
 import com.anhq.smartalarm.core.utils.AlarmReceiver
-import com.anhq.smartalarm.core.utils.SnoozeReceiver
-import com.anhq.smartalarm.core.utils.StopReceiver
+import com.anhq.smartalarm.core.utils.AlarmSnoozeReceiver
+import com.anhq.smartalarm.core.utils.AlarmStopReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -87,7 +87,7 @@ class NoGameAlarmActivity : ComponentActivity() {
                             alarmPreviewManager.stopPreview()
                         } else {
                             AlarmReceiver.stopAlarm()
-                            val stopIntent = Intent(this, StopReceiver::class.java).apply {
+                            val stopIntent = Intent(this, AlarmStopReceiver::class.java).apply {
                                 putExtra("alarm_id", alarmId)
                             }
                             sendBroadcast(stopIntent)
@@ -101,7 +101,7 @@ class NoGameAlarmActivity : ComponentActivity() {
                             alarmPreviewManager.stopPreview()
                         } else {
                             AlarmReceiver.stopAlarm()
-                            val snoozeIntent = Intent(this, SnoozeReceiver::class.java).apply {
+                            val snoozeIntent = Intent(this, AlarmSnoozeReceiver::class.java).apply {
                                 putExtra("alarm_id", alarmId)
                                 putExtra("is_repeating", isRepeating)
                                 putExtra("snooze_count", snoozeCount)
@@ -156,10 +156,10 @@ fun NoGameAlarmScreen(
                     containerColor = MaterialTheme.colorScheme.secondary
                 )
                 ) {
-                    Text("Tạm hoãn", style = label2)
+                    Text("Tạm hoãn", style = title3)
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
                     modifier = Modifier
@@ -170,7 +170,7 @@ fun NoGameAlarmScreen(
                     containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Dừng", style = label2)
+                    Text("Dừng", style = title3)
             }
         }
     }

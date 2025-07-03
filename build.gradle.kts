@@ -7,4 +7,5 @@ plugins {
     alias(libs.plugins.google.dagger.hilt.android) apply false
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization) apply false
     alias(libs.plugins.androidx.room) apply false
+    id("com.google.gms.google-services") version "4.4.3" apply false
 }

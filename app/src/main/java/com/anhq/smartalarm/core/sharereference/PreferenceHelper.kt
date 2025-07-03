@@ -2,13 +2,14 @@ package com.anhq.smartalarm.core.sharereference
 
 import android.content.Context
 import android.content.SharedPreferences
-import javax.inject.Inject
+import android.media.RingtoneManager
 import androidx.core.content.edit
 import com.anhq.smartalarm.core.model.GameDifficulty
 import com.anhq.smartalarm.core.model.SettingsUiState
 import com.anhq.smartalarm.core.model.ThemeOption
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import javax.inject.Inject
 
 class PreferenceHelper @Inject constructor(
     context: Context
@@ -45,7 +46,14 @@ class PreferenceHelper @Inject constructor(
             ),
             snoozeDurationMinutes = prefs.getInt(KEY_SNOOZE_DURATION, 5),
             maxSnoozeCount = prefs.getInt(KEY_MAX_SNOOZE_COUNT, 3),
-            timerDefaultSoundUri = prefs.getString(KEY_TIMER_DEFAULT_SOUND_URI, "") ?: "",
+            timerDefaultSoundUri = prefs.getString(
+                KEY_TIMER_DEFAULT_SOUND_URI,
+                RingtoneManager.getDefaultUri(
+                    RingtoneManager.TYPE_ALARM
+                ).toString()
+            ) ?: RingtoneManager.getDefaultUri(
+                RingtoneManager.TYPE_ALARM
+            ).toString(),
             timerDefaultVibrate = prefs.getBoolean(KEY_TIMER_DEFAULT_VIBRATE, true)
         )
     }
@@ -59,12 +67,6 @@ class PreferenceHelper @Inject constructor(
                 .putString(KEY_TIMER_DEFAULT_SOUND_URI, settings.timerDefaultSoundUri)
                 .putBoolean(KEY_TIMER_DEFAULT_VIBRATE, settings.timerDefaultVibrate)
         }
-    }
-
-    fun getCurrentGameDifficulty(): GameDifficulty {
-        return GameDifficulty.valueOf(
-            prefs.getString(KEY_DIFFICULTY, GameDifficulty.MEDIUM.name) ?: GameDifficulty.MEDIUM.name
-        )
     }
 
     var isFirstRun: Boolean

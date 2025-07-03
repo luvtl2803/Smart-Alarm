@@ -78,11 +78,20 @@ class SleepRepository @Inject constructor(
             deviceActivityRepository.getActivityBetween(startTime, endTime).collect { sleepData ->
                 Log.d(TAG, "Got ${sleepData.size} sleep periods")
                 val enhancedData = sleepData.map { sleep ->
+                    val endTimestamp = sleep.endTime.toEpochMilli()
+
+                    // Tìm báo thức trong khoảng thời gian từ lúc thức dậy trở về trước 30 phút
+                    val alarmStartTime = endTimestamp - (30 * 60 * 1000) // 30 phút trước khi thức
+                    val alarmEndTime = endTimestamp + (5 * 60 * 1000) // 5 phút sau khi thức
+
                     val dayAlarms = alarmHistoryDao.getHistoryBetween(
-                        sleep.startTime.toEpochMilli(),
-                        sleep.endTime.toEpochMilli()
+                        alarmStartTime,
+                        alarmEndTime
                     )
-                    Log.d(TAG, "Found ${dayAlarms.size} alarms for sleep period ${sleep.date}")
+                    Log.d(TAG, "Searching alarms for period ${sleep.date}:")
+                    Log.d(TAG, "End time: $endTimestamp")
+                    Log.d(TAG, "Search range: $alarmStartTime to $alarmEndTime")
+                    Log.d(TAG, "Found ${dayAlarms.size} alarms")
 
                     EnhancedSleepData(
                         date = sleep.date,
@@ -114,4 +123,4 @@ data class SleepData(
     val durationMinutes: Long,
     val startTime: Instant,
     val endTime: Instant
-) 
+)

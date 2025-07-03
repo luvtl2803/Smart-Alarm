@@ -62,10 +62,10 @@ fun SplashScreen(
 
     LaunchedEffect(key1 = true) {
         launch {
-            scale.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(800)
-            )
+        scale.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(800)
+        )
         }
         launch {
             delay(400) // Delay text appearance slightly
@@ -86,14 +86,14 @@ fun SplashScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            LottieAnimation(
-                modifier = Modifier
-                    .size(200.dp)
-                    .scale(scale.value),
-                composition = composition,
-                iterations = LottieConstants.IterateForever,
-            )
+    ) {
+        LottieAnimation(
+            modifier = Modifier
+                .size(200.dp)
+                .scale(scale.value),
+            composition = composition,
+            iterations = LottieConstants.IterateForever,
+        )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "Báo thức thông minh",

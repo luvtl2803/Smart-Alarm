@@ -13,8 +13,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.anhq.smartalarm.core.designsystem.theme.SmartAlarmTheme
 import com.anhq.smartalarm.core.utils.AlarmPreviewManager
 import com.anhq.smartalarm.core.utils.AlarmReceiver
-import com.anhq.smartalarm.core.utils.SnoozeReceiver
-import com.anhq.smartalarm.core.utils.StopReceiver
+import com.anhq.smartalarm.core.utils.AlarmSnoozeReceiver
+import com.anhq.smartalarm.core.utils.AlarmStopReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -65,7 +65,7 @@ class AlarmGameActivity : ComponentActivity() {
                             alarmPreviewManager.stopPreview()
                         } else {
                             AlarmReceiver.stopAlarm()
-                            val stopIntent = Intent(this, StopReceiver::class.java).apply {
+                            val stopIntent = Intent(this, AlarmStopReceiver::class.java).apply {
                                 putExtra("alarm_id", viewModel.alarmId)
                             }
                             sendBroadcast(stopIntent)
@@ -79,7 +79,7 @@ class AlarmGameActivity : ComponentActivity() {
                             alarmPreviewManager.stopPreview()
                         } else {
                             AlarmReceiver.stopAlarm()
-                            val snoozeIntent = Intent(this, SnoozeReceiver::class.java).apply {
+                            val snoozeIntent = Intent(this, AlarmSnoozeReceiver::class.java).apply {
                                 putExtra("alarm_id", viewModel.alarmId)
                                 putExtra("is_repeating", intent.getBooleanExtra("is_repeating", false))
                                 putExtra("snooze_count", intent.getIntExtra("snooze_count", 0))

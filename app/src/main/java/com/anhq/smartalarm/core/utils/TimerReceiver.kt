@@ -33,15 +33,48 @@ import java.util.Locale
 
 @AndroidEntryPoint
 class TimerReceiver : BroadcastReceiver() {
+    companion object {
+        private const val CHANNEL_ID = "timer_end_channel"
+        private const val WAKE_LOCK_TIMEOUT = 30 * 1000L
+        private val VIBRATION_PATTERN = longArrayOf(0, 1000, 1000)
+        private const val TAG = "TimerReceiver"
+
+        private var mediaPlayer: MediaPlayer? = null
+        private var vibrator: Vibrator? = null
+        private var vibrateJob: Job? = null
+        private var updateJob: Job? = null
+        private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+        fun stopTimer() {
+            scope.launch {
+                try {
+                    updateJob?.cancelAndJoin()
+                    vibrateJob?.cancelAndJoin()
+
+                    mediaPlayer?.stopAndRelease()
+                    mediaPlayer = null
+
+                    vibrator?.cancel()
+                    vibrator = null
+                    vibrateJob = null
+                    updateJob = null
+
+                    Log.d(TAG, "Timer sound and vibration stopped successfully")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error stopping timer", e)
+                }
+            }
+        }
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         Log.d(TAG, "TimerReceiver.onReceive() called")
 
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val wakeLock = powerManager.newWakeLock(
+        val wakeLock = context.getSystemService<PowerManager>()?.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
             "SmartAlarm:TimerWakeLock"
-        ).apply {
-            acquire(30 * 1000L)
+        )?.apply {
+            acquire(WAKE_LOCK_TIMEOUT)
         }
 
         scope.launch {
@@ -55,107 +88,108 @@ class TimerReceiver : BroadcastReceiver() {
 
                 if (timerId == -1) {
                     Log.e(TAG, "Invalid timer ID")
-                    wakeLock.release()
+                    wakeLock?.release()
                     return@launch
                 }
 
-                vibrator?.cancel()
-                vibrateJob?.cancelAndJoin()
-                vibrator = null
-
-                withContext(Dispatchers.IO) {
-                    try {
-                        mediaPlayer?.release()
-                        mediaPlayer = MediaPlayer().apply {
-                            val uri = if (soundUri.isNullOrEmpty()) {
-                                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                            } else {
-                                soundUri.toUri()
-                            }
-                            setDataSource(context, uri)
-                            setAudioAttributes(
-                                AudioAttributes.Builder()
-                                    .setUsage(AudioAttributes.USAGE_ALARM)
-                                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                    .build()
-                            )
-                            isLooping = true
-                            prepare()
-                            start()
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        try {
-                            mediaPlayer = MediaPlayer().apply {
-                                val uri =
-                                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                                setDataSource(context, uri)
-                                setAudioAttributes(
-                                    AudioAttributes.Builder()
-                                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                        .build()
-                                )
-                                isLooping = true
-                                prepare()
-                                start()
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
+                stopCurrentVibration()
 
                 if (isVibrate) {
-                    Log.d(TAG, "Setting up vibration")
-                    vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        val vibratorManager =
-                            context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                        vibratorManager.defaultVibrator
-                    } else {
-                        @Suppress("DEPRECATION")
-                        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                    }
+                    setupVibration(context)
+                }
 
-                    vibrateJob = scope.launch(Dispatchers.Default) {
-                        try {
-                            val pattern = longArrayOf(0, 1000, 1000)
-                            val effect = VibrationEffect.createWaveform(pattern, 0)
-                            @Suppress("DEPRECATION")
-                            vibrator?.vibrate(
-                                effect, AudioAttributes.Builder()
-                                    .setUsage(AudioAttributes.USAGE_ALARM)
-                                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                    .build()
-                            )
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error in vibration job", e)
-                        }
-                    }
-                } else {
-                    Log.d(TAG, "Vibration disabled")
+                withContext(Dispatchers.IO) {
+                    setupSound(context, soundUri)
                 }
 
                 showFullScreenNotification(context, timerId, endTime)
+                startNotificationUpdateJob(context, timerId, endTime)
 
-                updateJob?.cancelAndJoin()
-                updateJob = scope.launch(Dispatchers.Main) {
-                    try {
-                        val notificationManager =
-                            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                        while (isActive) {
-                            val notification = buildNotification(context, timerId, endTime)
-                            notificationManager.notify(timerId, notification)
-                            delay(1000)
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error in update job", e)
-                    }
-                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error in onReceive", e)
             } finally {
-                wakeLock.release()
+                wakeLock?.release()
+            }
+        }
+    }
+
+    private suspend fun stopCurrentVibration() {
+        vibrator?.cancel()
+        vibrateJob?.cancelAndJoin()
+        vibrator = null
+    }
+
+    private fun setupVibration(context: Context) {
+        Log.d(TAG, "Setting up vibration")
+        vibrator = context.getVibrator()
+
+        vibrateJob = scope.launch(Dispatchers.Default) {
+            try {
+                val effect = VibrationEffect.createWaveform(VIBRATION_PATTERN, 0)
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(
+                    effect,
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in vibration job", e)
+            }
+        }
+    }
+
+    private fun setupSound(context: Context, soundUri: String?) {
+        if (soundUri.isNullOrEmpty()) return
+
+        mediaPlayer?.stopAndRelease()
+
+        try {
+            setupCustomSound(context, soundUri)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            setupDefaultSound(context)
+        }
+    }
+
+    private fun setupCustomSound(context: Context, soundUri: String) {
+        mediaPlayer = MediaPlayer().apply {
+            setDataSource(context, soundUri.toUri())
+            setupAudioAttributes(AudioAttributes.USAGE_ALARM)
+            isLooping = true
+            prepare()
+            start()
+        }
+    }
+
+    private fun setupDefaultSound(context: Context) {
+        try {
+            mediaPlayer = MediaPlayer().apply {
+                val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                setDataSource(context, uri)
+                setupAudioAttributes(AudioAttributes.USAGE_NOTIFICATION)
+                isLooping = true
+                prepare()
+                start()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private suspend fun startNotificationUpdateJob(context: Context, timerId: Int, endTime: Long) {
+        updateJob?.cancelAndJoin()
+        updateJob = scope.launch(Dispatchers.Main) {
+            try {
+                val notificationManager = context.getSystemService<NotificationManager>()
+                while (isActive) {
+                    val notification = buildNotification(context, timerId, endTime)
+                    notificationManager?.notify(timerId, notification)
+                    delay(1000)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in update job", e)
             }
         }
     }
@@ -265,40 +299,33 @@ class TimerReceiver : BroadcastReceiver() {
             else -> String.format(Locale.US,"%d giây", seconds)
         }
     }
+}
 
-    companion object {
-        private const val CHANNEL_ID = "timer_end_channel"
-        private var mediaPlayer: MediaPlayer? = null
-        private var vibrator: Vibrator? = null
-        private var vibrateJob: Job? = null
-        private var updateJob: Job? = null
-        private const val TAG = "TimerReceiver"
-        private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-
-        fun stopTimer() {
-            scope.launch {
-                try {
-                    updateJob?.cancelAndJoin()
-                    vibrateJob?.cancelAndJoin()
-
-                    mediaPlayer?.apply {
-                        if (isPlaying) {
-                            stop()
-                        }
-                        release()
-                    }
-                    mediaPlayer = null
-
-                    vibrator?.cancel()
-                    vibrator = null
-                    vibrateJob = null
-                    updateJob = null
-
-                    Log.d(TAG, "Timer sound and vibration stopped successfully")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error stopping timer", e)
-                }
-            }
-        }
+// Extension functions
+private fun Context.getVibrator(): Vibrator? {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        getSystemService<VibratorManager>()?.defaultVibrator
+    } else {
+        getSystemService<Vibrator>()
     }
-} 
+}
+
+private fun MediaPlayer.setupAudioAttributes(usage: Int) {
+    setAudioAttributes(
+        AudioAttributes.Builder()
+            .setUsage(usage)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+    )
+}
+
+private fun MediaPlayer.stopAndRelease() {
+    if (isPlaying) {
+        stop()
+    }
+    release()
+}
+
+private inline fun <reified T> Context.getSystemService(): T? {
+    return getSystemServiceName(T::class.java)?.let { getSystemService(it) } as? T
+}

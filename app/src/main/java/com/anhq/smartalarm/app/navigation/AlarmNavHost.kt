@@ -7,7 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import com.anhq.smartalarm.app.ui.AlarmAppState
 import com.anhq.smartalarm.features.addalarm.navigation.addAlarmScreen
-import com.anhq.smartalarm.features.alarm.navigation.AlarmRoute
 import com.anhq.smartalarm.features.alarm.navigation.alarmScreen
 import com.anhq.smartalarm.features.editalarm.navigation.editAlarmScreen
 import com.anhq.smartalarm.features.onboarding.navigation.onboardingScreen

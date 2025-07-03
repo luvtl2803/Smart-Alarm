@@ -52,6 +52,7 @@ abstract class DataModule {
         fun providesDeviceActivityRepository(
             @ApplicationContext context: Context,
             deviceActivityDao: DeviceActivityDao
-        ): DeviceActivityRepository = DeviceActivityRepository(context, deviceActivityDao)
+        ): DeviceActivityRepository =
+            DeviceActivityRepository(context, deviceActivityDao)
     }
 }

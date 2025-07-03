@@ -9,6 +9,7 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -23,6 +24,7 @@ import com.anhq.smartalarm.core.utils.AlarmPreviewManager
 import com.anhq.smartalarm.core.utils.AlarmReceiver
 import com.anhq.smartalarm.core.utils.AlarmSound
 import com.anhq.smartalarm.core.utils.AlarmSoundManager
+import com.anhq.smartalarm.core.utils.SoundFileManager
 import com.anhq.smartalarm.features.alarm.NoGameAlarmActivity
 import com.anhq.smartalarm.features.game.AlarmGameActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,6 +43,7 @@ class EditAlarmViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val alarmRepository: AlarmRepository,
     private val alarmPreviewManager: AlarmPreviewManager,
+    private val soundFileManager: SoundFileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -104,9 +107,10 @@ class EditAlarmViewModel @Inject constructor(
             title = "Im lặng"
         )
 
+        val defaultUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
         val defaultAlarmSound = AlarmSound(
-            uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-            title = getTitleFromUri(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
+            uri = defaultUri,
+            title = alarmSoundManager.getAlarmTitleFromUri(defaultUri)
         )
         _alarmSounds.value = listOf(noSound) + listOf(defaultAlarmSound) + alarmSoundManager.getAllAlarmSounds()
     }
@@ -139,8 +143,28 @@ class EditAlarmViewModel @Inject constructor(
         _gameType.value = type
     }
 
-    fun setAlarmSound(uri: Uri) {
-        _selectedSound.value = AlarmSound(uri, getTitleFromUri(uri))
+    fun setAlarmSound(soundUri: Uri) {
+        Log.d("SoundUri", soundUri.toString())
+        if (soundUri.toString().isNotEmpty()) {
+            if (soundUri.toString().startsWith("content://com.android.providers")) {
+                val internalUri = soundFileManager.copyAlarmSoundToInternal(soundUri)
+                if (internalUri != null) {
+                    _selectedSound.value = AlarmSound(
+                        title = alarmSoundManager.getAlarmTitleFromUri(internalUri.toUri()),
+                        uri = internalUri.toUri()
+                    )
+                }
+            } else {
+                _selectedSound.value = AlarmSound(
+                    title = alarmSoundManager.getAlarmTitleFromUri(soundUri), uri = soundUri
+                )
+            }
+        } else {
+            soundFileManager.deleteAlarmSound()
+            _selectedSound.value = AlarmSound(
+                title = "Im lặng", uri = soundUri
+            )
+        }
     }
 
     fun previewAlarm(): Intent {

@@ -114,7 +114,11 @@ class StatisticsViewModel @Inject constructor(
     }
 
     fun formatActionInfo(data: EnhancedSleepData): String {
+        // Nếu không có báo thức
         if (data.alarmTriggerTime == null) return "Không có báo thức"
+
+        // Nếu không có hành động của người dùng
+        if (data.userAction == null) return "Chưa tương tác"
 
         val actionText = when (data.userAction) {
             "DISMISSED" -> "Tắt"
@@ -122,9 +126,24 @@ class StatisticsViewModel @Inject constructor(
             else -> "Không xác định"
         }
 
-        val timeToActionMinutes = data.timeToAction?.let { it / (60 * 1000) } ?: 0
-        val snoozeText = if (data.snoozeCount > 0) " (${data.snoozeCount} lần báo lại)" else ""
+        // Format thời gian phản ứng
+        val timeToActionText = data.timeToAction?.let { time ->
+            val minutes = time / (60 * 1000)
+            val hours = minutes / 60
+            val remainingMinutes = minutes % 60
 
-        return "$actionText sau ${timeToActionMinutes}p$snoozeText"
+            when {
+                hours > 0 -> "${hours}h ${remainingMinutes}p"
+                minutes > 0 -> "${minutes}p"
+                else -> "dưới 1p"
+            }
+        } ?: "không xác định"
+
+        // Thêm thông tin số lần báo lại nếu có
+        val snoozeText = if (data.snoozeCount > 0) {
+            " (${data.snoozeCount} lần báo lại)"
+        } else ""
+
+        return "$actionText sau $timeToActionText$snoozeText"
     }
 }

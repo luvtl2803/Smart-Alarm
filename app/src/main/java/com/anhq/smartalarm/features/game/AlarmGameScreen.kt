@@ -43,6 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anhq.smartalarm.core.designsystem.theme.title1
 import com.anhq.smartalarm.core.designsystem.theme.title2
+import com.anhq.smartalarm.core.designsystem.theme.title3
 import com.anhq.smartalarm.core.game.MathProblemGame
 import com.anhq.smartalarm.core.game.MemoryCardGame
 import com.anhq.smartalarm.core.game.MemoryTilesGame
@@ -112,7 +113,6 @@ fun AlarmGameScreen(
                 }
             }
 
-            // Snooze button at bottom
             if (game != null && !game.isGameCompleted()) {
 
                 if (viewModel.snoozeCount < uiState.maxSnoozeCount) {
@@ -125,7 +125,7 @@ fun AlarmGameScreen(
                             containerColor = MaterialTheme.colorScheme.secondary
                         )
                     ) {
-                        Text("Tạm hoãn")
+                        Text("Tạm hoãn", style = title3)
                     }
                 }
             }
@@ -232,11 +232,6 @@ fun MemoryTilesGameContent(game: MemoryTilesGame) {
             color = MaterialTheme.colorScheme.onBackground
         )
 
-//        Text(
-//            text = "${game.getCorrectTiles()}/${game.getTotalTiles()}",
-//            style = MaterialTheme.typography.title1
-//        )
-
         LazyVerticalGrid(
             columns = GridCells.Fixed(game.getGridSize()),
             modifier = Modifier.fillMaxWidth(),
@@ -274,7 +269,7 @@ fun MemoryTilesGameContent(game: MemoryTilesGame) {
                 },
                 modifier = Modifier.padding(top = 16.dp)
             ) {
-                Text("Phát lại", color = MaterialTheme.colorScheme.onPrimary)
+                Text("Phát lại", style = title3, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
@@ -331,8 +326,7 @@ fun MemoryCardGameContent(game: MemoryCardGame) {
         game.onCardFlip = { position ->
             flippedPositions = flippedPositions + position
             cards = game.getCards()
-            
-            // Chỉ vô hiệu hóa tương tác sau khi đã lật 2 thẻ
+
             if (flippedPositions.size >= 2) {
                 isInteractionEnabled = false
             }
@@ -340,7 +334,7 @@ fun MemoryCardGameContent(game: MemoryCardGame) {
 
         game.onPairMatched = {
             scope.launch {
-                delay(500) // Cho phép người chơi thấy cặp thẻ khớp
+                delay(500)
                 cards = game.getCards()
                 flippedPositions = emptyList()
                 isInteractionEnabled = true
@@ -349,7 +343,7 @@ fun MemoryCardGameContent(game: MemoryCardGame) {
 
         game.onPairMismatched = {
             scope.launch {
-                delay(1000) // Cho người chơi thấy cặp thẻ không khớp
+                delay(1000)
                 cards = game.getCards()
                 flippedPositions = emptyList()
                 isInteractionEnabled = true
@@ -359,17 +353,11 @@ fun MemoryCardGameContent(game: MemoryCardGame) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Text(
             text = "Tìm các cặp thẻ giống nhau",
             style = title1,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Text(
-            text = "${game.getMatchedPairs()}/${game.getTotalPairs()} cặp",
-            style = title2,
             color = MaterialTheme.colorScheme.onBackground
         )
 
@@ -389,6 +377,7 @@ fun MemoryCardGameContent(game: MemoryCardGame) {
                                 card.isMatched -> MaterialTheme.colorScheme.primary
                                 card.isFlipped || flippedPositions.contains(position) ->
                                     MaterialTheme.colorScheme.primaryContainer
+
                                 else -> MaterialTheme.colorScheme.surfaceVariant
                             }
                         )
@@ -396,7 +385,7 @@ fun MemoryCardGameContent(game: MemoryCardGame) {
                             enabled = isInteractionEnabled &&
                                     !card.isMatched &&
                                     !flippedPositions.contains(position) &&
-                                    flippedPositions.size < 2 // Chỉ cho phép lật tối đa 2 thẻ
+                                    flippedPositions.size < 2
                         ) {
                             game.flipCard(position)
                         },
@@ -420,7 +409,7 @@ fun MemoryCardGameContent(game: MemoryCardGame) {
                 flippedPositions = emptyList()
                 isInteractionEnabled = true
             },
-            modifier = Modifier.padding(top = 16.dp)
+            modifier = Modifier.padding(top = 8.dp)
         ) {
             Text("Bắt đầu lại", color = MaterialTheme.colorScheme.onPrimary)
         }
@@ -518,13 +507,46 @@ fun WordPuzzleGameContent(game: WordPuzzleGame) {
     }
 }
 
-@Preview
+@Preview(showBackground = true)
 @Composable
-private fun PreviewTilesGame() {
+private fun Preview1() {
+    val game = WordPuzzleGame(
+        GameDifficulty.MEDIUM
+    )
+    WordPuzzleGameContent(
+        game = game
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun Preview2() {
     val game = MemoryTilesGame(
         GameDifficulty.MEDIUM
     )
     MemoryTilesGameContent(
+        game = game
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun Preview3() {
+    val game = MathProblemGame(
+        GameDifficulty.MEDIUM
+    )
+    MathProblemGameContent(
+        game = game
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun Preview4() {
+    val game = MemoryCardGame(
+        GameDifficulty.MEDIUM
+    )
+    MemoryCardGameContent(
         game = game
     )
 }

@@ -19,19 +19,17 @@ class DeviceActivityRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val deviceActivityDao: DeviceActivityDao
 ) {
-    private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    private val usageStatsManager =
+        context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
     companion object {
-        private const val DEEP_SLEEP_THRESHOLD = 15L * 60 * 1000 // 15 minutes without activity
         private const val TAG = "DeviceActivityRepo"
     }
 
     suspend fun syncDeviceActivity(startTime: Long, endTime: Long) {
         try {
-            // Xóa dữ liệu cũ trong khoảng thời gian này
             deviceActivityDao.deleteActivityBetween(startTime, endTime)
 
-            // Lấy usage stats từ hệ thống
             val usageStats = usageStatsManager.queryUsageStats(
                 UsageStatsManager.INTERVAL_BEST,
                 startTime,
@@ -40,66 +38,74 @@ class DeviceActivityRepository @Inject constructor(
 
             Log.d(TAG, "Found ${usageStats.size} usage stats records")
 
-            var lastActiveTime = startTime
+            val activeStats = usageStats.filter { it.totalTimeInForeground > 0 }
             var isInDeepSleep = false
 
-            for (stat in usageStats) {
-                val currentTime = stat.lastTimeUsed
-                val activeTime = stat.totalTimeInForeground
+            for (i in 0 until activeStats.size - 1) {
+                val currentStat = activeStats[i]
+                val nextStat = activeStats[i + 1]
+                val currentTime = currentStat.lastTimeUsed
+                val nextTime = nextStat.lastTimeUsed
+                val inactiveDuration = nextTime - currentTime
+                val currentLocalTime = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(currentTime),
+                    ZoneId.systemDefault()
+                )
 
-                if (activeTime > 0) {
-                    // Device was active
-                    if (isInDeepSleep) {
-                        // Kết thúc giấc ngủ
-                        val activity = DeviceActivityEntity(
-                            timestamp = currentTime,
-                            isActive = true,
-                            dayOfWeek = LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(currentTime),
-                                ZoneId.systemDefault()
-                            ).dayOfWeek.value
+//                Log.d(
+//                    TAG, "Checking gap: from=$currentLocalTime, " +
+//                            "package=${currentStat.packageName}, " +
+//                            "inactiveDuration=${inactiveDuration / 1000 / 60}m"
+//                )
+
+                if (inactiveDuration >= 30 * 60 * 1000) {
+                    val hour = currentLocalTime.hour
+                    if ((hour in 21..23 || hour in 0..4) && !isInDeepSleep) {
+                        deviceActivityDao.insertActivity(
+                            DeviceActivityEntity(
+                                timestamp = currentTime,
+                                isActive = false,
+                                dayOfWeek = currentLocalTime.dayOfWeek.value
+                            )
                         )
-                        deviceActivityDao.insertActivity(activity)
-                        Log.d(TAG, "Inserted wake activity: $activity")
-                    }
-                    isInDeepSleep = false
-                    lastActiveTime = currentTime
-                } else {
-                    // Check for deep sleep entry
-                    val inactiveDuration = currentTime - lastActiveTime
-                    if (!isInDeepSleep && inactiveDuration >= DEEP_SLEEP_THRESHOLD) {
-                        // Bắt đầu giấc ngủ
-                        val activity = DeviceActivityEntity(
-                            timestamp = lastActiveTime,
-                            isActive = false,
-                            dayOfWeek = LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(lastActiveTime),
-                                ZoneId.systemDefault()
-                            ).dayOfWeek.value
-                        )
-                        deviceActivityDao.insertActivity(activity)
-                        Log.d(TAG, "Inserted sleep activity: $activity")
+                        Log.d(TAG, "Recording sleep start at $currentLocalTime")
                         isInDeepSleep = true
                     }
                 }
+
+                if (isInDeepSleep && nextStat.totalTimeInForeground > 0) {
+                    val wakeTime = LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(nextTime),
+                        ZoneId.systemDefault()
+                    )
+                    deviceActivityDao.insertActivity(
+                        DeviceActivityEntity(
+                            timestamp = nextTime,
+                            isActive = true,
+                            dayOfWeek = wakeTime.dayOfWeek.value
+                        )
+                    )
+                    Log.d(TAG, "Recording wake up at $wakeTime")
+                    isInDeepSleep = false
+                }
             }
 
-            // Nếu đang trong trạng thái ngủ khi kết thúc, thêm một bản ghi kết thúc
             if (isInDeepSleep) {
-                val activity = DeviceActivityEntity(
-                    timestamp = endTime,
-                    isActive = true,
-                    dayOfWeek = LocalDateTime.ofInstant(
-                        Instant.ofEpochMilli(endTime),
-                        ZoneId.systemDefault()
-                    ).dayOfWeek.value
+                val endLocalTime = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(endTime),
+                    ZoneId.systemDefault()
                 )
-                deviceActivityDao.insertActivity(activity)
-                Log.d(TAG, "Inserted final wake activity: $activity")
+                deviceActivityDao.insertActivity(
+                    DeviceActivityEntity(
+                        timestamp = endTime,
+                        isActive = true,
+                        dayOfWeek = endLocalTime.dayOfWeek.value
+                    )
+                )
+                Log.d(TAG, "Recording final wake up at $endLocalTime")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error syncing device activity", e)
-            e.printStackTrace()
         }
     }
 
@@ -107,34 +113,32 @@ class DeviceActivityRepository @Inject constructor(
         Log.d(TAG, "Getting activity between $startTime and $endTime")
         return deviceActivityDao.getActivityBetween(startTime, endTime)
             .map { activities ->
-                Log.d(TAG, "Found ${activities.size} activity records")
                 val sleepPeriods = mutableListOf<SleepData>()
                 var sleepStart: Long? = null
 
                 activities.forEach { activity ->
                     if (!activity.isActive && sleepStart == null) {
-                        // Bắt đầu giấc ngủ
                         sleepStart = activity.timestamp
                         Log.d(TAG, "Found sleep start at ${Instant.ofEpochMilli(activity.timestamp)}")
                     } else if (activity.isActive && sleepStart != null) {
-                        // Kết thúc giấc ngủ
                         val startDateTime = LocalDateTime.ofInstant(
                             Instant.ofEpochMilli(sleepStart!!),
                             ZoneId.systemDefault()
                         )
-                        
-                        // Chỉ tính các giấc ngủ hợp lệ (bắt đầu từ tối và kết thúc vào sáng)
-                        if (isValidSleepPeriod(startDateTime, activity.timestamp - sleepStart!!)) {
-                            val sleepData = SleepData(
-                                date = startDateTime,
-                                durationMinutes = (activity.timestamp - sleepStart!!) / (60 * 1000),
-                                startTime = Instant.ofEpochMilli(sleepStart!!),
-                                endTime = Instant.ofEpochMilli(activity.timestamp)
+                        val duration = activity.timestamp - sleepStart!!
+
+                        if (isValidSleepPeriod(startDateTime, duration)) {
+                            sleepPeriods.add(
+                                SleepData(
+                                    date = startDateTime,
+                                    durationMinutes = duration / (60 * 1000),
+                                    startTime = Instant.ofEpochMilli(sleepStart!!),
+                                    endTime = Instant.ofEpochMilli(activity.timestamp)
+                                )
                             )
-                            sleepPeriods.add(sleepData)
-                            Log.d(TAG, "Added valid sleep period: $sleepData")
+                            Log.d(TAG, "Added valid sleep period: ${sleepPeriods.last()}")
                         } else {
-                            Log.d(TAG, "Invalid sleep period: start=$startDateTime, duration=${activity.timestamp - sleepStart!!}ms")
+                            Log.d(TAG, "Invalid sleep period: start=$startDateTime, duration=${duration}ms")
                         }
                         sleepStart = null
                     }
@@ -146,17 +150,12 @@ class DeviceActivityRepository @Inject constructor(
     }
 
     private fun isValidSleepPeriod(startDateTime: LocalDateTime, duration: Long): Boolean {
-        // Kiểm tra thời gian bắt đầu (18:00 - 03:00)
         val startHour = startDateTime.hour
-        val isValidStart = startHour in 20..23 || startHour in 0..3
-        
-        // Kiểm tra thời lượng (1-12 giờ)
+        val isValidStart = startHour in 21..23 || startHour in 0..4
         val durationHours = duration / (60 * 60 * 1000)
-        val isValidDuration = durationHours in 1..12
+        val isValidDuration = durationHours in 2..14
 
-        Log.d(TAG, "Validating sleep period: startHour=$startHour, durationHours=$durationHours")
-        Log.d(TAG, "isValidStart=$isValidStart, isValidDuration=$isValidDuration")
-
-        return !isValidStart && isValidDuration
+        Log.d(TAG, "Validating sleep period: localTime=$startDateTime, durationHours=$durationHours")
+        return isValidStart && isValidDuration
     }
-} 
+}

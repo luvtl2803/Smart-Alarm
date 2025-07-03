@@ -11,15 +11,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CardElevation
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.MaterialTheme
@@ -35,11 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anhq.smartalarm.core.data.repository.EnhancedSleepData
-import com.anhq.smartalarm.core.designsystem.theme.headline3
 import com.anhq.smartalarm.core.designsystem.theme.body2
+import com.anhq.smartalarm.core.designsystem.theme.headline3
+import com.anhq.smartalarm.core.designsystem.theme.label1
 import com.anhq.smartalarm.core.designsystem.theme.title2
 import com.anhq.smartalarm.core.designsystem.theme.title3
-import com.anhq.smartalarm.core.designsystem.theme.label1
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
@@ -228,7 +225,7 @@ fun StatisticsScreen(
 
                         // Biểu đồ thời gian ngủ
                         item {
-                            StatCard(
+                            StatChart(
                                 title = "Thời gian ngủ 7 ngày gần đây",
                                 content = {
                                     val entries = uiState.sleepData
@@ -269,7 +266,9 @@ fun StatisticsScreen(
                         // Chi tiết từng ngày
                         items(uiState.sleepData.reversed()) { data ->
                             Card(
-                                modifier = Modifier.fillMaxWidth().padding(4.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(4.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surface
                                 ),
@@ -279,7 +278,8 @@ fun StatisticsScreen(
                             ) {
                                 Column(
                                     modifier = Modifier
-                                        .fillMaxWidth().padding(4.dp),
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Row(
@@ -334,39 +334,29 @@ fun StatisticsScreen(
 }
 
 @Composable
-fun StatCard(
+fun StatChart(
     title: String,
     content: @Composable () -> Unit
 ) {
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 8.dp)
             .height(300.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
+        Text(
+            text = title, style = label1,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Box(
-                modifier = Modifier
+        Box(
+            modifier = Modifier
                     .fillMaxSize(),
                 contentAlignment = Alignment.Center
-            ) {
+        ) {
                 content()
-            }
         }
-    }
+        }
 }

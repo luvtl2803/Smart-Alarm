@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.google.dagger.hilt.android)
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.androidx.room)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -23,11 +24,12 @@ android {
     }
 
     buildTypes {
-        debug {
+        getByName("debug") {
             isMinifyEnabled = false
         }
-        release {
-            isMinifyEnabled = true
+        getByName("release") {
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -86,6 +88,13 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
     implementation("com.airbnb.android:lottie-compose:6.3.0")
 
+    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
     // hilt
     implementation(libs.hilt.android)
     ksp(libs.dagger.hilt.complier)
@@ -118,19 +127,5 @@ dependencies {
 
     implementation("com.github.commandiron:WheelPickerCompose:1.1.11")
 
-    implementation("com.maxkeppeler.sheets-compose-dialogs:duration:1.3.0")
+        implementation("com.maxkeppeler.sheets-compose-dialogs:duration:1.3.0")
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

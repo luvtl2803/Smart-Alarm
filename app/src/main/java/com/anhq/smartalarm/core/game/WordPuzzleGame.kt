@@ -2,7 +2,6 @@ package com.anhq.smartalarm.core.game
 
 import com.anhq.smartalarm.core.model.AlarmGameType
 import com.anhq.smartalarm.core.model.GameDifficulty
-import kotlin.random.Random
 
 class WordPuzzleGame(private val difficulty: GameDifficulty) : AlarmGame() {
     override val type = AlarmGameType.WORD_PUZZLE
@@ -18,7 +17,6 @@ class WordPuzzleGame(private val difficulty: GameDifficulty) : AlarmGame() {
     }
     private val maxAttempts = attemptsLeft
 
-    // Danh sách từ theo độ khó
     private val easyWords = listOf(
         "mèo", "chó", "gà", "vịt", "heo",
         "bàn", "ghế", "cửa", "nhà", "xe",
@@ -55,7 +53,6 @@ class WordPuzzleGame(private val difficulty: GameDifficulty) : AlarmGame() {
     }
 
     private fun scrambleWord(word: String): String {
-        // Tách từ thành các ký tự, giữ nguyên khoảng trắng
         val parts = word.split(" ")
         return parts.joinToString(" ") { part ->
             part.toCharArray()
@@ -81,7 +78,6 @@ class WordPuzzleGame(private val difficulty: GameDifficulty) : AlarmGame() {
     fun getMaxAttempts(): Int = maxAttempts
 
     fun getHint(): String {
-        // Hiển thị chữ cái đầu tiên của mỗi từ
         return currentWord.split(" ").joinToString(" ") { word ->
             word.first() + "..." + (if (word.length > 1) word.last() else "")
         }

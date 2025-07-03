@@ -57,4 +57,4 @@ class TimerRepository @Inject constructor(
             endedAt = endedAt
         )
     }
-} 
+}
