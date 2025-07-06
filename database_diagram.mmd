@@ -1,0 +1,74 @@
+erDiagram
+    %% Main Entities
+    AlarmEntity {
+        int id PK
+        int hour
+        int minute
+        boolean isActive
+        boolean isVibrate
+        string selectedDays
+        string label
+        string gameType
+        string soundUri
+    }
+
+    AlarmHistoryEntity {
+        int id PK
+        int alarmId FK
+        long triggeredAt
+        string userAction
+        long actionTime
+        string dayOfWeek
+        int snoozeCount
+    }
+
+    GameStatisticsEntity {
+        int id PK
+        int historyId FK
+        string gameType
+        string difficulty
+        long completionTime
+        int score
+        int attempts
+        datetime dateTime
+    }
+
+    %% Supporting Entities
+    AlarmSuggestionEntity {
+        int id PK
+        int hour
+        int minute
+        string dayOfWeek
+        float confidence
+        int suggestedCount
+        int acceptedCount
+    }
+
+    DeviceActivityEntity {
+        int id PK
+        long timestamp
+        boolean isActive
+        int dayOfWeek
+        string screenState
+        int batteryLevel
+        boolean isCharging
+    }
+
+    SleepDataEntity {
+        int id PK
+        datetime date
+        long durationMinutes
+        datetime startTime
+        datetime endTime
+        float quality
+        long deepSleepMinutes
+        long lightSleepMinutes
+        int interruptions
+    }
+
+    %% Relationships
+    AlarmEntity ||--o{ AlarmHistoryEntity : "quản lý"
+    AlarmHistoryEntity ||--|| GameStatisticsEntity : "theo dõi"
+    AlarmHistoryEntity }o--|| SleepDataEntity : "phân tích"
+    AlarmEntity }o--o{ AlarmSuggestionEntity : "đề xuất"
+    SleepDataEntity ||--o{ DeviceActivityEntity : "ghi nhận" 

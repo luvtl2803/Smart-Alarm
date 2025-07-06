@@ -41,11 +41,12 @@ fun SplashRoute(
 ) {
     SplashScreen(
         onSplashFinished = {
-            if (viewModel.isFirstRun()) {
-                navController.navigateToOnboarding()
-            } else {
-                navController.navigateToAlarm()
-            }
+            navController.navigateToOnboarding()
+//            if (viewModel.isFirstRun()) {
+//                navController.navigateToOnboarding()
+//            } else {
+//                navController.navigateToAlarm()
+//            }
         }
     )
 }

@@ -9,6 +9,7 @@ import com.anhq.smartalarm.core.data.repository.DeviceActivityRepository
 import com.anhq.smartalarm.core.database.dao.AlarmHistoryDao
 import com.anhq.smartalarm.core.database.dao.AlarmSuggestionDao
 import com.anhq.smartalarm.core.database.dao.DeviceActivityDao
+import com.anhq.smartalarm.core.sharereference.PreferenceHelper
 import com.anhq.smartalarm.core.utils.AlarmSuggestionAnalyzer
 import dagger.Binds
 import dagger.Module
@@ -51,8 +52,9 @@ abstract class DataModule {
         @Singleton
         fun providesDeviceActivityRepository(
             @ApplicationContext context: Context,
-            deviceActivityDao: DeviceActivityDao
+            deviceActivityDao: DeviceActivityDao,
+            preferenceHelper: PreferenceHelper,
         ): DeviceActivityRepository =
-            DeviceActivityRepository(context, deviceActivityDao)
+            DeviceActivityRepository(context, deviceActivityDao, preferenceHelper)
     }
 }

@@ -25,7 +25,7 @@ class FirebaseAuthHelper {
     fun initGoogleSignIn(activity: Activity) {
         Log.d("FirebaseAuthHelper", "Initializing Google Sign In")
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("435300733841-707fs4ki47nle1fobgku94l1fp7687q7.apps.googleusercontent.com")  // Web client ID
+            .requestIdToken("435300733841-707fs4ki47nle1fobgku94l1fp7687q7.apps.googleusercontent.com")
             .requestEmail()
             .requestProfile()
             .build()
@@ -124,7 +124,6 @@ class FirebaseAuthHelper {
             )
 
             if (duplicateDoc != null) {
-                // Nếu tìm thấy alarm trùng, update document đó
                 Log.d("FirebaseAuthHelper", "Found duplicate alarm, updating existing document")
                 db.collection("users")
                     .document(userId)
@@ -133,7 +132,6 @@ class FirebaseAuthHelper {
                     .set(alarmMap)
                     .await()
             } else {
-                // Nếu không trùng, tạo document mới
                 Log.d("FirebaseAuthHelper", "No duplicate found, creating new document")
                 db.collection("users")
                     .document(userId)
@@ -154,14 +152,12 @@ class FirebaseAuthHelper {
             val userId = auth.currentUser?.uid ?: throw Exception("User not logged in")
             Log.d("FirebaseAuthHelper", "Starting to save timer ${timer.id} to user: $userId")
 
-            // Lấy tất cả timer hiện có
             val existingTimers = db.collection("users")
                 .document(userId)
                 .collection("timers")
                 .get()
                 .await()
 
-            // Kiểm tra xem có timer nào trùng không
             val duplicateDoc = existingTimers.documents.find { doc ->
                 val initialTimeMillis = doc.getLong("initialTimeMillis")
                 val remainingTimeMillis = doc.getLong("remainingTimeMillis")
@@ -183,7 +179,6 @@ class FirebaseAuthHelper {
             )
 
             if (duplicateDoc != null) {
-                // Nếu tìm thấy timer trùng, update document đó
                 Log.d("FirebaseAuthHelper", "Found duplicate timer, updating existing document")
                 db.collection("users")
                     .document(userId)
@@ -192,7 +187,6 @@ class FirebaseAuthHelper {
                     .set(timerMap)
                     .await()
             } else {
-                // Nếu không trùng, tạo document mới
                 Log.d("FirebaseAuthHelper", "No duplicate found, creating new document")
                 db.collection("users")
                     .document(userId)
@@ -232,7 +226,7 @@ class FirebaseAuthHelper {
                     }?.toSet() ?: emptySet()
 
                     Alarm(
-                        id = 0, // ID sẽ được Room tự động tạo
+                        id = 0,
                         hour = hour,
                         minute = minute,
                         isActive = false,
@@ -270,7 +264,7 @@ class FirebaseAuthHelper {
                     val remainingTimeMillis = doc.getLong("remainingTimeMillis") ?: initialTimeMillis
 
                     Timer(
-                        id = 0, // ID sẽ được Room tự động tạo
+                        id = 0,
                         initialTimeMillis = initialTimeMillis,
                         currentInitialTimeMillis = doc.getLong("currentInitialTimeMillis") ?: initialTimeMillis,
                         remainingTimeMillis = remainingTimeMillis,

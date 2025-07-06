@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "c2d41f120b4ea97679c4352229498a5d",
+    "identityHash": "f4465ea4283c2a10d9e0626cc6e90b78",
     "entities": [
       {
         "tableName": "alarms",
@@ -131,7 +131,7 @@
       },
       {
         "tableName": "alarm_history",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `alarmId` INTEGER NOT NULL, `triggeredAt` INTEGER NOT NULL, `userAction` TEXT NOT NULL, `actionTime` INTEGER NOT NULL, `dayOfWeek` TEXT NOT NULL, FOREIGN KEY(`alarmId`) REFERENCES `alarms`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `alarmId` INTEGER NOT NULL, `triggeredAt` INTEGER NOT NULL, `userAction` TEXT NOT NULL, `actionTime` INTEGER NOT NULL, `dayOfWeek` TEXT NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -175,20 +175,7 @@
           "columnNames": [
             "id"
           ]
-        },
-        "foreignKeys": [
-          {
-            "table": "alarms",
-            "onDelete": "CASCADE",
-            "onUpdate": "NO ACTION",
-            "columns": [
-              "alarmId"
-            ],
-            "referencedColumns": [
-              "id"
-            ]
-          }
-        ]
+        }
       },
       {
         "tableName": "alarm_suggestions",
@@ -289,7 +276,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c2d41f120b4ea97679c4352229498a5d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f4465ea4283c2a10d9e0626cc6e90b78')"
     ]
   }
 }

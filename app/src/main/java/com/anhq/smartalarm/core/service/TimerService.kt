@@ -4,9 +4,13 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.ContentValues.TAG
+import android.content.Context
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.getSystemService
 import com.anhq.smartalarm.R
 import com.anhq.smartalarm.app.MainActivity
 import com.anhq.smartalarm.core.data.repository.TimerRepository
@@ -15,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -62,60 +67,69 @@ class TimerService : Service() {
 
         // Start monitoring timers if not already started
         if (!::updateJob.isInitialized || updateJob.isCancelled) {
-            updateJob = serviceScope.launch {
-                try {
-                    while (true) {
-                        val currentTime = System.currentTimeMillis()
-                        val timers = timerRepository.timers.first()
-                        val runningTimers = timers.filter { it.isRunning }
-
-                        if (runningTimers.isEmpty()) {
-                            stopForeground(STOP_FOREGROUND_REMOVE)
-                            stopSelf()
-                            break
-                        }
-
-                        val nearestTimer = runningTimers.minByOrNull { it.remainingTimeMillis }
-                        val remainingTime = nearestTimer?.let {
-                            if (it.isPaused) {
-                                it.remainingTimeMillis
-                            } else {
-                                val elapsed = currentTime - it.lastTickTime
-                                val remaining = (it.remainingTimeMillis - elapsed).coerceAtLeast(0)
-                                if (remaining == 0L) {
-                                    stopForeground(STOP_FOREGROUND_REMOVE)
-                                    stopSelf()
-                                    null
-                                } else {
-                                    remaining
-                                }
-                            }
-                        } ?: 0
-
-                        if (remainingTime > 0 && shouldUpdateNotification(runningTimers.size)) {
-                            val notification = buildNotification(
-                                runningTimers.size,
-                                remainingTime,
-                                nearestTimer?.id ?: -1,
-                                nearestTimer?.isPaused ?: false
-                            )
-                            startForeground(NOTIFICATION_ID, notification)
-
-                            lastNotificationUpdate = currentTime
-                            lastNotifiedTime = remainingTime
-                            lastRunningCount = runningTimers.size
-                        }
-
-                        delay(100)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    stopSelf()
-                }
+            serviceScope.launch {
+                startNotificationUpdateJob(this@TimerService)
             }
         }
 
         return START_STICKY
+    }
+
+    private suspend fun startNotificationUpdateJob(context: Context) {
+        try {
+            updateJob.cancelAndJoin()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error canceling previous update job", e)
+        }
+
+        updateJob = serviceScope.launch {
+            try {
+                context.getSystemService<NotificationManager>()
+                while (true) {
+                    val currentTime = System.currentTimeMillis()
+                    val timers = timerRepository.timers.first()
+                    val activeTimers = timers.filter { it.isRunning && !it.isPaused }
+
+                    if (activeTimers.isEmpty()) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                        break
+                    }
+
+                    val nearestTimer = activeTimers.minByOrNull { it.remainingTimeMillis }
+                    val remainingTime = nearestTimer?.let {
+                        val elapsed = currentTime - it.lastTickTime
+                        val remaining = (it.remainingTimeMillis - elapsed).coerceAtLeast(0)
+                        if (remaining == 0L) {
+                            stopForeground(STOP_FOREGROUND_REMOVE)
+                            stopSelf()
+                            null
+                        } else {
+                            remaining
+                        }
+                    } ?: 0
+
+                    if (remainingTime > 0 && shouldUpdateNotification(activeTimers.size)) {
+                        val notification = buildNotification(
+                            activeTimers.size,
+                            remainingTime,
+                            nearestTimer?.id ?: -1,
+                            nearestTimer?.isPaused ?: false
+                        )
+                        startForeground(NOTIFICATION_ID, notification)
+
+                        lastNotificationUpdate = currentTime
+                        lastNotifiedTime = remainingTime
+                        lastRunningCount = activeTimers.size
+                    }
+
+                    delay(100)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                stopSelf()
+            }
+        }
     }
 
     private fun handlePauseAction(timerId: Int) {
@@ -210,17 +224,19 @@ class TimerService : Service() {
     private fun shouldUpdateNotification(
         currentRunningCount: Int
     ): Boolean {
-        val currentTime = System.currentTimeMillis()
+        synchronized(this) {
+            val currentTime = System.currentTimeMillis()
 
-        if (lastRunningCount == -1 || currentRunningCount != lastRunningCount) {
-            return true
+            if (lastRunningCount == -1 || currentRunningCount != lastRunningCount) {
+                return true
+            }
+
+            if (currentTime - lastNotificationUpdate >= UPDATE_INTERVAL) {
+                return true
+            }
+
+            return false
         }
-
-        if (currentTime - lastNotificationUpdate >= UPDATE_INTERVAL) {
-            return true
-        }
-
-        return false
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -252,69 +268,71 @@ class TimerService : Service() {
     }
 
     private fun buildNotification(
-        runningTimersCount: Int,
+        activeTimersCount: Int,
         remainingTime: Long,
         timerId: Int,
         isPaused: Boolean
-    ) = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_alarm)
-        .setContentTitle(
-            when {
-                runningTimersCount == 0 -> "Không có hẹn giờ nào đang chạy"
-                isPaused -> "Hẹn giờ tạm dừng"
-                else -> "Hẹn giờ đang chạy"
-            }
-        )
-        .setContentText(
-            when (runningTimersCount) {
-                0 -> "Chạm để mở ứng dụng"
-                1 -> formatTime(remainingTime)
-                else -> "Gần nhất: ${formatTime(remainingTime)}"
-            }
-        )
-        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-        .setCategory(NotificationCompat.CATEGORY_SERVICE)
-        .setVisibility(NotificationCompat.VISIBILITY_SECRET)
-        .setOngoing(true)
-        .setAutoCancel(false)
-        .setShowWhen(false)
-        .apply {
-            if (runningTimersCount > 0) {
-                if (isPaused) {
-                    addAction(
-                        NotificationCompat.Action(
-                            R.drawable.ic_play,
-                            "Tiếp tục",
-                            createActionPendingIntent(ACTION_RESUME, timerId)
+    ) = synchronized(this) {
+        NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_alarm)
+            .setContentTitle(
+                when (activeTimersCount) {
+                    0 -> "Không có hẹn giờ nào đang chạy"
+                    1 -> if (isPaused) "Hẹn giờ tạm dừng" else "Hẹn giờ đang chạy"
+                    else -> "$activeTimersCount hẹn giờ đang chạy"
+                }
+            )
+            .setContentText(
+                when (activeTimersCount) {
+                    0 -> "Chạm để mở ứng dụng"
+                    1 -> formatTime(remainingTime)
+                    else -> "Gần nhất: ${formatTime(remainingTime)}"
+                }
+            )
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setShowWhen(false)
+            .apply {
+                if (activeTimersCount == 1) {
+                    if (isPaused) {
+                        addAction(
+                            NotificationCompat.Action(
+                                R.drawable.ic_play,
+                                "Tiếp tục",
+                                createActionPendingIntent(ACTION_RESUME, timerId)
+                            )
                         )
-                    )
-                    addAction(
-                        NotificationCompat.Action(
-                            R.drawable.ic_check_circle,
-                            "Đặt lại",
-                            createActionPendingIntent(ACTION_RESET, timerId)
+                        addAction(
+                            NotificationCompat.Action(
+                                R.drawable.ic_check_circle,
+                                "Đặt lại",
+                                createActionPendingIntent(ACTION_RESET, timerId)
+                            )
                         )
-                    )
-                } else {
-                    addAction(
-                        NotificationCompat.Action(
-                            R.drawable.ic_pause,
-                            "Tạm dừng",
-                            createActionPendingIntent(ACTION_PAUSE, timerId)
+                    } else {
+                        addAction(
+                            NotificationCompat.Action(
+                                R.drawable.ic_pause,
+                                "Tạm dừng",
+                                createActionPendingIntent(ACTION_PAUSE, timerId)
+                            )
                         )
-                    )
-                    addAction(
-                        NotificationCompat.Action(
-                            R.drawable.ic_add,
-                            "+1 phút",
-                            createActionPendingIntent(ACTION_ADD_MINUTE, timerId)
+                        addAction(
+                            NotificationCompat.Action(
+                                R.drawable.ic_add,
+                                "+1 phút",
+                                createActionPendingIntent(ACTION_ADD_MINUTE, timerId)
+                            )
                         )
-                    )
+                    }
                 }
             }
-        }
-        .setContentIntent(createContentIntent())
-        .build()
+            .setContentIntent(createContentIntent())
+            .build()
+    }
 
     private fun createActionPendingIntent(action: String, timerId: Int): PendingIntent {
         val intent = Intent(this, TimerService::class.java).apply {

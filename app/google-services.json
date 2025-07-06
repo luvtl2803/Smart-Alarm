@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "435300733841",
+    "project_id": "smartalarm-fc4b7",
+    "storage_bucket": "smartalarm-fc4b7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:435300733841:android:c21fdd1a2e8b5d168b0030",
+        "android_client_info": {
+          "package_name": "com.anhq.smartalarm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "435300733841-450jgg11k8o5cmj72dl50pkfqh2heja6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anhq.smartalarm",
+            "certificate_hash": "ac7044b98d2bd3baa216c395577ba6c9b730348b"
+          }
+        },
+        {
+          "client_id": "435300733841-6ebl162phtasj543qmvhlhr23n2v2uic.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anhq.smartalarm",
+            "certificate_hash": "49540f4c007d3c396de3787c02403a08922aa248"
+          }
+        },
+        {
+          "client_id": "435300733841-707fs4ki47nle1fobgku94l1fp7687q7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKPdFlWc6U7GxSt_eVXm4EjUBwgXF8Kt4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "435300733841-707fs4ki47nle1fobgku94l1fp7687q7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

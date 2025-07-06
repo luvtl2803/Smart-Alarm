@@ -8,6 +8,6 @@ data class DeviceActivityEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val timestamp: Long,
-    val isActive: Boolean, // true = device active, false = inactive/sleep
-    val dayOfWeek: Int // 1-7 for Monday-Sunday
+    val isActive: Boolean,
+    val dayOfWeek: Int
 ) 

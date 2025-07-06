@@ -59,13 +59,15 @@ class TimerViewModel @Inject constructor(
 
     private fun updateRunningTimers() {
         val now = System.currentTimeMillis()
+        val completedTimers = mutableListOf<Timer>()
+        
         val updatedTimers = _timers.value.map { timer ->
             if (timer.isRunning && !timer.isPaused) {
                 val elapsedTime = now - timer.lastTickTime
                 val newRemainingTime = (timer.remainingTimeMillis - elapsedTime).coerceAtLeast(0)
 
                 if (newRemainingTime == 0L) {
-                    handleTimerComplete(timer)
+                    completedTimers.add(timer)
                     timer.copy(
                         isRunning = true,
                         isPaused = true,
@@ -94,6 +96,15 @@ class TimerViewModel @Inject constructor(
         }
 
         _timers.value = updatedTimers
+
+        if (completedTimers.isNotEmpty()) {
+            viewModelScope.launch {
+                completedTimers.forEachIndexed { index, timer ->
+                    delay(index * 500L)
+                    handleTimerComplete(timer)
+                }
+            }
+        }
 
         val context = getApplication<Application>()
         if (updatedTimers.any { it.isRunning && !it.isPaused }) {

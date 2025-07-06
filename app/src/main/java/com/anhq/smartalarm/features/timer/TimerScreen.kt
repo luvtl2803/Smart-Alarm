@@ -25,11 +25,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -46,6 +50,7 @@ import com.maxkeppeler.sheets.duration.DurationDialog
 import com.maxkeppeler.sheets.duration.models.DurationConfig
 import com.maxkeppeler.sheets.duration.models.DurationFormat
 import com.maxkeppeler.sheets.duration.models.DurationSelection
+import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -77,12 +82,14 @@ fun TimerScreen(
     onAddOneMinute: (Int) -> Unit,
     onResetTimer: (Int) -> Unit
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
-
-    val durationState = rememberUseCaseState(
-        visible = showAddDialog,
-        onDismissRequest = { showAddDialog = false }
-    )
+    val dialogState = remember {
+        mutableStateOf(
+            DialogState(
+                isVisible = false,
+                timeInSeconds = 0L
+            )
+        )
+    }
 
     Scaffold(
         modifier = Modifier.padding(
@@ -101,8 +108,7 @@ fun TimerScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    showAddDialog = true
-                    durationState.show()
+                    dialogState.value = DialogState(isVisible = true, timeInSeconds = 0L)
                 },
                 shape = RoundedCornerShape(50.dp)
             ) {
@@ -110,34 +116,85 @@ fun TimerScreen(
             }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            if (timers.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Chưa có hẹn giờ nào",
-                        style = title2,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(timers) { timer ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            TimerList(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                timers = timers,
+                onPauseTimer = onPauseTimer,
+                onResumeTimer = onResumeTimer,
+                onStopTimer = onStopTimer,
+                onAddOneMinute = onAddOneMinute,
+                onResetTimer = onResetTimer
+            )
+
+            if (dialogState.value.isVisible) {
+                TimerDurationDialog(
+                    dialogState = dialogState,
+                    onAddTimer = onAddTimer
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimerList(
+    modifier: Modifier = Modifier,
+    timers: List<Timer>,
+    onPauseTimer: (Int) -> Unit,
+    onResumeTimer: (Int) -> Unit,
+    onStopTimer: (Int) -> Unit,
+    onAddOneMinute: (Int) -> Unit,
+    onResetTimer: (Int) -> Unit
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (timers.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Chưa có hẹn giờ nào",
+                    style = title2,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(
+                    items = timers,
+                    key = { it.id }
+                ) { timer ->
+                    key(timer.id) {
+                        val displayTime by remember(
+                            timer.remainingTimeMillis,
+                            timer.lastTickTime
+                        ) {
+                            derivedStateOf {
+                                if (timer.isPaused) {
+                                    timer.remainingTimeMillis
+                                } else {
+                                    val now = System.currentTimeMillis()
+                                    val elapsed = now - timer.lastTickTime
+                                    (timer.remainingTimeMillis - elapsed).coerceAtLeast(0)
+                                }
+                            }
+                        }
+
                         TimerCard(
                             timer = timer,
+                            displayTime = displayTime,
                             onPause = { onPauseTimer(timer.id) },
                             onResume = { onResumeTimer(timer.id) },
                             onStop = { onStopTimer(timer.id) },
@@ -148,30 +205,63 @@ fun TimerScreen(
                 }
             }
         }
-
-        DurationDialog(
-            state = durationState,
-            selection = DurationSelection(
-                onNegativeClick = { showAddDialog = false },
-                onPositiveClick = { timeInSeconds ->
-                    val totalMillis = timeInSeconds * 1000L
-                    onAddTimer(totalMillis)
-                    showAddDialog = false
-                }
-            ),
-            config = DurationConfig(
-                timeFormat = DurationFormat.HH_MM_SS,
-                minTime = 1,
-                maxTime = 24 * 60 * 60,
-                displayClearButton = false
-            )
-        )
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimerDurationDialog(
+    dialogState: MutableState<DialogState>,
+    onAddTimer: (Long) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val durationState = rememberUseCaseState()
+
+    // Reset dialog state when it's dismissed
+    LaunchedEffect(dialogState.value.isVisible) {
+        if (dialogState.value.isVisible) {
+            durationState.show()
+        } else {
+            durationState.hide()
+        }
+    }
+
+    DurationDialog(
+        state = durationState,
+        selection = DurationSelection(
+            onNegativeClick = {
+                durationState.hide()
+                dialogState.value = DialogState(isVisible = false, timeInSeconds = 0L)
+            },
+            onPositiveClick = { timeInSeconds ->
+                scope.launch {
+                    val totalMillis = timeInSeconds * 1000L
+                    onAddTimer(totalMillis)
+                    durationState.hide()
+                    dialogState.value =
+                        DialogState(isVisible = false, timeInSeconds = timeInSeconds)
+                }
+            }
+        ),
+        config = DurationConfig(
+            timeFormat = DurationFormat.HH_MM_SS,
+            currentTime = dialogState.value.timeInSeconds,
+            minTime = 1,
+            maxTime = 24 * 60 * 60,
+            displayClearButton = false
+        )
+    )
+}
+
+private data class DialogState(
+    val isVisible: Boolean = false,
+    val timeInSeconds: Long = 0L
+)
 
 @Composable
 fun TimerCard(
     timer: Timer,
+    displayTime: Long,
     onPause: () -> Unit,
     onResume: () -> Unit,
     onStop: () -> Unit,
@@ -192,7 +282,7 @@ fun TimerCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = formatTime(timer.remainingTimeMillis),
+                    text = formatTime(displayTime),
                     style = MaterialTheme.typography.headlineMedium
                 )
                 Row {

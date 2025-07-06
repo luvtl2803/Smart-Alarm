@@ -53,11 +53,14 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.anhq.smartalarm.R
+import com.anhq.smartalarm.core.designsystem.theme.body2
+import com.anhq.smartalarm.core.designsystem.theme.body5
+import com.anhq.smartalarm.core.designsystem.theme.headline2
+import com.anhq.smartalarm.core.designsystem.theme.title1
+import com.anhq.smartalarm.core.designsystem.theme.title3
 import com.anhq.smartalarm.features.alarm.navigation.navigateToAlarm
-import com.anhq.smartalarm.features.timer.navigation.navigateToTimer
 import com.commandiron.wheel_picker_compose.WheelTimePicker
 import com.commandiron.wheel_picker_compose.core.TimeFormat
-import com.commandiron.wheel_picker_compose.core.WheelPickerDefaults
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 
@@ -364,7 +367,7 @@ fun OnboardingPage(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -382,8 +385,7 @@ fun OnboardingPage(
 
         Text(
             text = stringResource(page.title),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+            style = title1,
             textAlign = TextAlign.Center
         )
 
@@ -391,8 +393,7 @@ fun OnboardingPage(
 
         Text(
             text = stringResource(page.description),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            style = body2,
             textAlign = TextAlign.Center
         )
     }
@@ -423,8 +424,7 @@ fun SleepTimePickerScreen(
 
         Text(
             text = stringResource(R.string.sleep_time_title),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+            style = title1,
             textAlign = TextAlign.Center
         )
 
@@ -432,8 +432,7 @@ fun SleepTimePickerScreen(
 
         Text(
             text = stringResource(R.string.sleep_time_desc),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            style = body2,
             textAlign = TextAlign.Center
         )
 
@@ -451,11 +450,7 @@ fun SleepTimePickerScreen(
                 timeFormat = TimeFormat.HOUR_24,
                 size = DpSize(300.dp, 150.dp),
                 rowCount = 3,
-                textStyle = MaterialTheme.typography.headlineMedium,
-                textColor = MaterialTheme.colorScheme.onBackground,
-                selectorProperties = WheelPickerDefaults.selectorProperties(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                ),
+                textStyle = headline2,
                 onSnappedTime = { time ->
                     selectedTime = time
                 }
@@ -466,8 +461,7 @@ fun SleepTimePickerScreen(
 
         Text(
             text = stringResource(R.string.sleep_time_explanation),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            style = body5,
             textAlign = TextAlign.Center
         )
 
@@ -476,25 +470,22 @@ fun SleepTimePickerScreen(
         Button(
             onClick = { onTimeSelected(selectedTime.hour, selectedTime.minute) },
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
         ) {
             Text(
                 text = stringResource(R.string.next),
-                style = MaterialTheme.typography.titleMedium
+                style = title3
             )
         }
     }
 }
 
-@Preview
+@Preview()
 @Composable
 private fun PreviewOnboardingScreen() {
-    OnboardingScreen(
-        onOnboardingComplete = { }
-    )
+    SleepTimePickerScreen { _, _ ->
+
+    }
 }

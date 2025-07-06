@@ -315,7 +315,7 @@ fun StatisticsScreen(
                                     Text(
                                         text = formatActionInfo(data),
                                         style = body2,
-                                        color = if (data.userAction == "SNOOZED")
+                                        color = if (data.snoozeCount > 0)
                                             MaterialTheme.colorScheme.error
                                         else MaterialTheme.colorScheme.onSurfaceVariant
                                     )

@@ -30,6 +30,7 @@ class PreferenceHelper @Inject constructor(
         private const val KEY_USAGE_STATS_PERMISSION = "usage_stats_permission"
         private const val KEY_TIMER_DEFAULT_SOUND_URI = "timer_default_sound_uri"
         private const val KEY_TIMER_DEFAULT_VIBRATE = "timer_default_vibrate"
+        private const val KEY_HAS_DEFAULT_TIMER_SOUND = "has_default_timer_sound"
     }
 
     val settingsFlow: Flow<SettingsUiState> = flow {
@@ -88,6 +89,10 @@ class PreferenceHelper @Inject constructor(
     var isUsageStatsPermissionGranted: Boolean
         get() = prefs.getBoolean(KEY_USAGE_STATS_PERMISSION, false)
         set(value) = prefs.edit { putBoolean(KEY_USAGE_STATS_PERMISSION, value) }
+
+    var hasDefaultTimerSound: Boolean
+        get() = prefs.getBoolean(KEY_HAS_DEFAULT_TIMER_SOUND, false)
+        set(value) = prefs.edit { putBoolean(KEY_HAS_DEFAULT_TIMER_SOUND, value) }
 
     fun clearAll() {
         prefs.edit { clear() }

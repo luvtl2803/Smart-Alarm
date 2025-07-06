@@ -61,7 +61,7 @@
 
     <!-- Onboarding -->
     <string name="onboarding_title_1">Báo thức thông minh</string>
-    <string name="onboarding_desc_1">Đặt báo thức và chọn trò chơi để tắt báo thức</string>
+    <string name="onboarding_desc_1">Tạo báo thức theo sở thích của bạn</string>
     <string name="onboarding_title_2">Trò chơi đánh thức</string>
     <string name="onboarding_desc_2">Giải các câu đố và trò chơi để tắt báo thức</string>
     <string name="onboarding_title_3">Theo dõi giấc ngủ</string>
@@ -82,7 +82,7 @@
     <!-- Sleep Time Picker Screen -->
     <string name="sleep_time_title">Thời gian đi ngủ</string>
     <string name="sleep_time_desc">Chọn thời gian bạn thường đi ngủ</string>
-    <string name="sleep_time_explanation">Thời gian này sẽ giúp chúng tôi xác định khoảng thời gian bạn ngủ để theo dõi giấc ngủ chính xác hơn. Chúng tôi sẽ sử dụng thông tin này kết hợp với dữ liệu sử dụng điện thoại để phân tích giấc ngủ của bạn.</string>
+    <string name="sleep_time_explanation">Thời gian này sẽ giúp chúng tôi xác định khoảng thời gian bạn ngủ để xác định ca giấc ngủ chính xác hơn.</string>
 
     <string name="suggested_times">Thời gian gợi ý</string>
     <string name="alarm_suggestion_format">%1$02d:%2$02d</string>

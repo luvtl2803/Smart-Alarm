@@ -1,0 +1,130 @@
+@startuml Database_Diagram
+
+!define ENTITY_BG_COLOR #E3F2FD
+!define ENTITY_BORDER_COLOR #1976D2
+!define ENTITY_HEADER_BG_COLOR #1976D2
+!define ENTITY_HEADER_FONT_COLOR #FFFFFF
+!define RELATIONSHIP_COLOR #2196F3
+!define ARROW_COLOR #1976D2
+
+' Global settings
+scale 1.5
+left to right direction
+skinparam linetype ortho
+skinparam Padding 12
+skinparam Margin 20
+skinparam defaultTextAlignment center
+skinparam nodesep 100
+skinparam ranksep 60
+
+' Styling
+skinparam class {
+    BackgroundColor ENTITY_BG_COLOR
+    BorderColor ENTITY_BORDER_COLOR
+    ArrowColor ARROW_COLOR
+    FontName Arial
+    FontSize 16
+    AttributeFontSize 14
+    AttributeFontColor #37474F
+    BorderThickness 2
+    StereotypeFontSize 12
+    StereotypeFontColor #37474F
+}
+
+skinparam entity {
+    BackgroundColor ENTITY_BG_COLOR
+    BorderColor ENTITY_BORDER_COLOR
+    FontColor #37474F
+    AttributeFontColor #37474F
+    StereotypeFontColor ENTITY_HEADER_FONT_COLOR
+}
+
+' Row 1 - Main Flow
+entity "AlarmEntity" as alarm #E3F2FD {
+    * id: Int <<PK>>
+    --
+    hour: Int
+    minute: Int
+    isActive: Boolean
+    isVibrate: Boolean
+    selectedDays: Set<DayOfWeek>
+    label: String
+    gameType: String
+    soundUri: String
+}
+
+entity "AlarmHistoryEntity" as history #E3F2FD {
+    * id: Int <<PK>>
+    * alarmId: Int <<FK>>
+    --
+    triggeredAt: Long
+    userAction: String
+    actionTime: Long
+    dayOfWeek: String
+    snoozeCount: Int
+}
+
+entity "GameStatisticsEntity" as gameStats #E3F2FD {
+    * id: Int <<PK>>
+    * historyId: Int <<FK>>
+    --
+    gameType: String
+    difficulty: String
+    completionTime: Long
+    score: Int
+    attempts: Int
+    dateTime: DateTime
+}
+
+' Row 2 - Supporting Entities
+entity "AlarmSuggestionEntity" as suggestion #E3F2FD {
+    * id: Int <<PK>>
+    --
+    hour: Int
+    minute: Int
+    dayOfWeek: String
+    confidence: Float
+    suggestedCount: Int
+    acceptedCount: Int
+}
+
+entity "DeviceActivityEntity" as activity #E3F2FD {
+    * id: Int <<PK>>
+    --
+    timestamp: Long
+    isActive: Boolean
+    dayOfWeek: Int
+    screenState: String
+    batteryLevel: Int
+    isCharging: Boolean
+}
+
+entity "SleepDataEntity" as sleep #E3F2FD {
+    * id: Int <<PK>>
+    --
+    date: DateTime
+    durationMinutes: Long
+    startTime: DateTime
+    endTime: DateTime
+    quality: Float
+    deepSleepMinutes: Long
+    lightSleepMinutes: Long
+    interruptions: Int
+}
+
+' Layout Hints
+alarm -[hidden]right- history
+history -[hidden]right- gameStats
+suggestion -[hidden]right- activity
+activity -[hidden]right- sleep
+
+' Main Flow Relationships
+alarm "1" -right[#2196F3]- "*" history : quản lý >
+history "1" -right[#2196F3]- "1" gameStats : theo dõi >
+
+' Supporting Relationships
+suggestion "*" -up[#2196F3]- "*" alarm : đề xuất >
+sleep "1" -up[#2196F3]- "*" history : phân tích >
+activity "*" -right[#2196F3]- "1" sleep : ghi nhận >
+
+@enduml 

@@ -1,0 +1,17 @@
+DELETE FROM alarm_suggestions;
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (5,30,'MONDAY',0.8,strftime('%s','now')*1000,15,12);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (5,30,'TUESDAY',0.8,strftime('%s','now')*1000,15,12);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (5,30,'WEDNESDAY',0.8,strftime('%s','now')*1000,15,12);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (5,30,'THURSDAY',0.8,strftime('%s','now')*1000,15,12);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (5,30,'FRIDAY',0.8,strftime('%s','now')*1000,15,12);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (6,30,'MONDAY',0.9,strftime('%s','now')*1000,25,22);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (6,30,'TUESDAY',0.9,strftime('%s','now')*1000,25,22);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (6,30,'WEDNESDAY',0.9,strftime('%s','now')*1000,25,22);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (6,30,'THURSDAY',0.9,strftime('%s','now')*1000,25,22);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (6,30,'FRIDAY',0.9,strftime('%s','now')*1000,25,22);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (7,30,'SATURDAY',0.85,strftime('%s','now')*1000,18,15);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (7,30,'SUNDAY',0.85,strftime('%s','now')*1000,18,15);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (8,30,'SATURDAY',0.75,strftime('%s','now')*1000,12,9);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (8,30,'SUNDAY',0.75,strftime('%s','now')*1000,12,9);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (6,0,'SATURDAY',0.6,strftime('%s','now')*1000,8,5);
+INSERT INTO alarm_suggestions (hour,minute,dayOfWeek,confidence,lastUpdated,suggestedCount,acceptedCount) VALUES (6,0,'SUNDAY',0.6,strftime('%s','now')*1000,8,5); 

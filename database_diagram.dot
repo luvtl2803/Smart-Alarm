@@ -1,0 +1,53 @@
+digraph G {
+    rankdir=LR;  // Left to Right direction
+    splines=ortho;  // Orthogonal lines
+    nodesep=0.8;
+    ranksep=0.8;
+    
+    // Node styles
+    node [
+        shape=record,
+        style=filled,
+        fillcolor="#E3F2FD",
+        color="#1976D2",
+        fontname="Arial",
+        fontsize=10
+    ];
+    
+    // Edge styles
+    edge [
+        color="#2196F3",
+        fontname="Arial",
+        fontsize=10,
+        fontcolor="#37474F"
+    ];
+
+    // Main Flow Entities
+    AlarmEntity [label="{AlarmEntity|{id: Int (PK)|hour: Int|minute: Int|isActive: Boolean|isVibrate: Boolean|selectedDays: String|label: String|gameType: String|soundUri: String}}"];
+    
+    AlarmHistory [label="{AlarmHistoryEntity|{id: Int (PK)|alarmId: Int (FK)|triggeredAt: Long|userAction: String|actionTime: Long|dayOfWeek: String|snoozeCount: Int}}"];
+    
+    GameStats [label="{GameStatisticsEntity|{id: Int (PK)|historyId: Int (FK)|gameType: String|difficulty: String|completionTime: Long|score: Int|attempts: Int|dateTime: DateTime}}"];
+
+    // Supporting Entities
+    AlarmSuggestion [label="{AlarmSuggestionEntity|{id: Int (PK)|hour: Int|minute: Int|dayOfWeek: String|confidence: Float|suggestedCount: Int|acceptedCount: Int}}"];
+    
+    DeviceActivity [label="{DeviceActivityEntity|{id: Int (PK)|timestamp: Long|isActive: Boolean|dayOfWeek: Int|screenState: String|batteryLevel: Int|isCharging: Boolean}}"];
+    
+    SleepData [label="{SleepDataEntity|{id: Int (PK)|date: DateTime|durationMinutes: Long|startTime: DateTime|endTime: DateTime|quality: Float|deepSleepMinutes: Long|lightSleepMinutes: Long|interruptions: Int}}"];
+
+    // Main Flow Layout
+    {rank=same; AlarmEntity; AlarmHistory; GameStats;}
+    
+    // Supporting Entities Layout
+    {rank=same; AlarmSuggestion; DeviceActivity; SleepData;}
+
+    // Main Flow Relationships
+    AlarmEntity -> AlarmHistory [label="quản lý (1:n)"];
+    AlarmHistory -> GameStats [label="theo dõi (1:1)"];
+    
+    // Supporting Relationships
+    AlarmSuggestion -> AlarmEntity [label="đề xuất (n:n)"];
+    SleepData -> AlarmHistory [label="phân tích (1:n)"];
+    DeviceActivity -> SleepData [label="ghi nhận (n:1)"];
+} 

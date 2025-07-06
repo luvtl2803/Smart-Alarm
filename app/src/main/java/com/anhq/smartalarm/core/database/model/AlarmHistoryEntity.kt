@@ -6,15 +6,7 @@ import androidx.room.PrimaryKey
 import com.anhq.smartalarm.core.model.DayOfWeek
 
 @Entity(
-    tableName = "alarm_history",
-    foreignKeys = [
-        ForeignKey(
-            entity = AlarmEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["alarmId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ]
+    tableName = "alarm_history"
 )
 data class AlarmHistoryEntity(
     @PrimaryKey(autoGenerate = true)

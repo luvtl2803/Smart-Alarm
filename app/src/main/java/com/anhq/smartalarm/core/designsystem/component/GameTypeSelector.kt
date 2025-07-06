@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -25,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.anhq.smartalarm.R
-import com.anhq.smartalarm.core.designsystem.theme.body2
 import com.anhq.smartalarm.core.designsystem.theme.body4
 import com.anhq.smartalarm.core.designsystem.theme.title3
 import com.anhq.smartalarm.core.model.AlarmGameType
@@ -53,7 +53,7 @@ fun GameTypeSelector(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            androidx.compose.foundation.lazy.LazyRow(
+            LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -64,7 +64,7 @@ fun GameTypeSelector(
                         onClick = { onGameTypeSelected(AlarmGameType.NONE) }
                     )
                 }
-                
+
                 items(AlarmGameType.entries.size - 1) { index ->
                     val gameType = AlarmGameType.entries.filter { it != AlarmGameType.NONE }[index]
                     GameTypeItem(

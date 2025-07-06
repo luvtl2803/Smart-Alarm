@@ -20,19 +20,28 @@ class TimerStopReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "TimerStopReceiver"
+        private const val NOTIFICATION_ID = 1000
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         val timerId = intent.getIntExtra("timer_id", -1)
         val shouldAddMinute = intent.getBooleanExtra("add_minute", false)
+        val shouldStopAll = intent.getBooleanExtra("stop_all", false)
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (shouldStopAll) {
+            Log.d(TAG, "Stopping all timers")
+            notificationManager.cancel(NOTIFICATION_ID)
+            TimerReceiver.stopTimer()
+            return
+        }
 
         if (timerId != -1) {
             Log.d(TAG, "Timer action received: timerId=$timerId, shouldAddMinute=$shouldAddMinute")
 
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.cancel(timerId)
-
-            TimerReceiver.stopTimer()
+            notificationManager.cancel(NOTIFICATION_ID)
+            TimerReceiver.stopSpecificTimer(timerId)
 
             if (shouldAddMinute) {
                 val serviceIntent = Intent(context, TimerService::class.java).apply {

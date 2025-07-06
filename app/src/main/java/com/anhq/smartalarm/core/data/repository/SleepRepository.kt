@@ -8,9 +8,13 @@ import android.os.Process
 import android.provider.Settings
 import android.util.Log
 import com.anhq.smartalarm.core.database.dao.AlarmHistoryDao
+import com.anhq.smartalarm.core.database.dao.DeviceActivityDao
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Calendar
@@ -21,6 +25,7 @@ import javax.inject.Singleton
 class SleepRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val alarmHistoryDao: AlarmHistoryDao,
+    private val deviceActivityDao: DeviceActivityDao,
     private val deviceActivityRepository: DeviceActivityRepository
 ) {
 
@@ -60,7 +65,6 @@ class SleepRepository @Inject constructor(
                 return@flow
             }
 
-            // Sync device activity data
             val calendar = Calendar.getInstance()
             val endTime = calendar.timeInMillis
             calendar.add(Calendar.DAY_OF_YEAR, -days)
@@ -69,48 +73,49 @@ class SleepRepository @Inject constructor(
             Log.d(
                 TAG,
                 "Syncing device activity from ${Instant.ofEpochMilli(startTime)} to ${
-                    Instant.ofEpochMilli(endTime)
+                    Instant.ofEpochMilli(
+                        endTime
+                    )
                 }"
             )
             deviceActivityRepository.syncDeviceActivity(startTime, endTime)
 
-            // Combine sleep data with alarm history
-            deviceActivityRepository.getActivityBetween(startTime, endTime).collect { sleepData ->
-                Log.d(TAG, "Got ${sleepData.size} sleep periods")
-                val enhancedData = sleepData.map { sleep ->
-                    val endTimestamp = sleep.endTime.toEpochMilli()
-
-                    // Tìm báo thức trong khoảng thời gian từ lúc thức dậy trở về trước 30 phút
-                    val alarmStartTime = endTimestamp - (30 * 60 * 1000) // 30 phút trước khi thức
-                    val alarmEndTime = endTimestamp + (5 * 60 * 1000) // 5 phút sau khi thức
-
-                    val dayAlarms = alarmHistoryDao.getHistoryBetween(
-                        alarmStartTime,
-                        alarmEndTime
-                    )
-                    Log.d(TAG, "Searching alarms for period ${sleep.date}:")
-                    Log.d(TAG, "End time: $endTimestamp")
-                    Log.d(TAG, "Search range: $alarmStartTime to $alarmEndTime")
-                    Log.d(TAG, "Found ${dayAlarms.size} alarms")
-
-                    EnhancedSleepData(
-                        date = sleep.date,
-                        durationMinutes = sleep.durationMinutes,
-                        startTime = sleep.startTime,
-                        endTime = sleep.endTime,
-                        alarmTriggerTime = dayAlarms.firstOrNull()?.let {
-                            Instant.ofEpochMilli(it.triggeredAt)
-                        },
-                        userAction = dayAlarms.lastOrNull()?.userAction,
-                        timeToAction = dayAlarms.lastOrNull()?.let {
-                            it.actionTime - it.triggeredAt
-                        },
-                        snoozeCount = dayAlarms.count { it.userAction == "SNOOZED" }
-                    )
-                }
-                Log.d(TAG, "Emitting ${enhancedData.size} enhanced sleep periods")
-                emit(enhancedData)
+            val sleepStarts = withContext(Dispatchers.IO) {
+                deviceActivityDao.getActivityBetween(startTime, endTime)
+                    .first()
+                    .filter { !it.isActive }
+                    .sortedBy { it.timestamp }
             }
+
+            val result = mutableListOf<EnhancedSleepData>()
+            for (sleepStart in sleepStarts) {
+                val minEnd = sleepStart.timestamp + 3 * 60 * 60 * 1000L
+                val maxEnd = sleepStart.timestamp + 12 * 60 * 60 * 1000L
+                val alarms = alarmHistoryDao.getHistoryBetween(minEnd, maxEnd)
+                val dismissedAlarm = alarms.firstOrNull { it.userAction == "DISMISSED" }
+                if (dismissedAlarm != null) {
+                    val durationMinutes =
+                        (dismissedAlarm.actionTime - sleepStart.timestamp) / (60 * 1000)
+                    if (durationMinutes in (3 * 60)..(12 * 60)) {
+                        result.add(
+                            EnhancedSleepData(
+                                date = LocalDateTime.ofInstant(
+                                    Instant.ofEpochMilli(sleepStart.timestamp),
+                                    java.time.ZoneId.systemDefault()
+                                ),
+                                durationMinutes = durationMinutes,
+                                startTime = Instant.ofEpochMilli(sleepStart.timestamp),
+                                endTime = Instant.ofEpochMilli(dismissedAlarm.actionTime),
+                                alarmTriggerTime = Instant.ofEpochMilli(dismissedAlarm.triggeredAt),
+                                userAction = dismissedAlarm.userAction,
+                                timeToAction = dismissedAlarm.actionTime - dismissedAlarm.triggeredAt,
+                                snoozeCount = alarms.count { it.userAction == "SNOOZED" }
+                            )
+                        )
+                    }
+                }
+            }
+            emit(result)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting enhanced sleep data", e)
             emit(emptyList())
@@ -118,9 +123,3 @@ class SleepRepository @Inject constructor(
     }
 }
 
-data class SleepData(
-    val date: LocalDateTime,
-    val durationMinutes: Long,
-    val startTime: Instant,
-    val endTime: Instant
-)

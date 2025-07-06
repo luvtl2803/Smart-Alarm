@@ -74,10 +74,11 @@ class SettingViewModel @Inject constructor(
         )
         _alarmSounds.value = listOf(noSound) + listOf(defaultAlarmSound) + alarmSoundManager.getAllAlarmSounds()
 
-        if (_uiState.value.timerDefaultSoundUri.isEmpty()) {
+        if (!preferenceHelper.hasDefaultTimerSound) {
             _uiState.update {
                 it.copy(timerDefaultSoundUri = defaultAlarmSound.uri.toString())
             }
+            preferenceHelper.hasDefaultTimerSound = true
         }
     }
 
